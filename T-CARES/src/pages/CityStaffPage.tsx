@@ -19,7 +19,6 @@ import {
   Calendar,
   Clock,
   Layers,
-  LogOut,
   MapPin,
   Search,
   ShieldCheck,
@@ -32,7 +31,6 @@ export function CityStaffPage() {
     isStaffAuthenticated,
     staffDepartment,
     loginAsStaff,
-    logoutStaff,
   } = useApp()
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
   const [selectedDept, setSelectedDept] = useState<string>(
@@ -194,38 +192,18 @@ export function CityStaffPage() {
       {/* Top Banner / Breadcrumb */}
       <div className="flex flex-col justify-between gap-3 border-b border-border pb-4 sm:flex-row sm:items-center">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="rounded bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
-              Staff Command Center
-            </span>
-            <span className="font-mono text-xs text-muted-foreground">
-              Route: /staff
-            </span>
+          <div className="flex items-center gap-2"> 
+            <span className="py-.5 text-xs text-primary opacity-60">         
+              Staff Command Center   
+            </span>       
           </div>
           <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground">
             Complaints & Action Dashboard
           </h1>
-          <p className="text-xs text-muted-foreground">
-            One master ticket per problem — eliminate duplicate dispatches
-            across Tuguegarao departments.
-          </p>
+          
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-            <span className="size-2 animate-pulse rounded-full bg-emerald-500" />
-            Active Session: {staffDepartment}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={logoutStaff}
-            className="cursor-pointer gap-1.5 border-border text-xs hover:bg-muted"
-          >
-            <LogOut className="size-3.5" />
-            Sign Out
-          </Button>
-        </div>
+        
       </div>
 
       {/* KPI ROW */}
@@ -312,10 +290,6 @@ export function CityStaffPage() {
               <MapPin className="size-4 text-primary" />
               Tuguegarao Complaint Hotspot Map
             </h2>
-            <p className="text-xs text-muted-foreground">
-              Marker diameter scales with citizen report density. Click any pin
-              to inspect or dispatch.
-            </p>
           </div>
         </div>
         <HotspotMap

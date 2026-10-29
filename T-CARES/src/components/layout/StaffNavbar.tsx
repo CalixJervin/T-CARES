@@ -1,11 +1,9 @@
 import { Link } from "react-router-dom"
 import { useTheme } from "@/components/theme-provider"
-import { useApp } from "@/context/AppContext"
-import { ArrowLeft, Building2, LogOut, Moon, Sun } from "lucide-react"
+import { ArrowLeft, Building2, Moon, Sun } from "lucide-react"
 
 export function StaffNavbar() {
   const { theme, setTheme } = useTheme()
-  const { isStaffAuthenticated, staffDepartment, logoutStaff } = useApp()
 
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark")
@@ -26,9 +24,7 @@ export function StaffNavbar() {
             <div className="flex flex-col leading-none">
               <div className="flex items-center gap-1.5 text-sm font-bold">
                 CityAction
-                <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
-                  Staff Command Center
-                </span>
+                
               </div>
               <span className="hidden text-[10px] text-muted-foreground sm:inline">
                 Tuguegarao City LGU Operations
@@ -36,19 +32,6 @@ export function StaffNavbar() {
             </div>
           </Link>
         </div>
-
-        {/* Staff Session Indicator (if logged in) */}
-        {isStaffAuthenticated && (
-          <div className="hidden items-center gap-2 md:flex">
-            <span className="flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-              <span className="size-2 animate-pulse rounded-full bg-emerald-500" />
-              <span>
-                Department:{" "}
-                <strong className="font-semibold">{staffDepartment}</strong>
-              </span>
-            </span>
-          </div>
-        )}
 
         {/* Right side controls */}
         <div className="flex items-center gap-1.5 sm:gap-2">
@@ -74,18 +57,6 @@ export function StaffNavbar() {
               <Moon className="size-3.5" />
             )}
           </button>
-
-          {/* Logout if authenticated */}
-          {isStaffAuthenticated && (
-            <button
-              onClick={logoutStaff}
-              title="Sign out of Staff Portal"
-              className="flex cursor-pointer items-center gap-1 rounded-lg border border-destructive/30 bg-destructive/10 px-2 py-1 text-xs font-medium text-destructive transition-colors hover:bg-destructive/20"
-            >
-              <LogOut className="size-3.2" />
-              <span className="hidden sm:inline">Sign Out</span>
-            </button>
-          )}
         </div>
       </div>
     </header>
