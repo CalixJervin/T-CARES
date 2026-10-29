@@ -33,7 +33,7 @@ export function PublicTicketPage() {
             Ticket ID &quot;{id}&quot; does not exist or has been removed.
           </p>
           <div className="mt-4">
-            <Link to="/">
+            <Link to="/user/report">
               <Button size="sm" className="cursor-pointer gap-2 text-xs">
                 <ArrowLeft className="size-4" />
                 Return to Citizen Portal
@@ -53,7 +53,7 @@ export function PublicTicketPage() {
       {/* Top back button */}
       <div className="mb-4 flex items-center justify-between">
         <Link
-          to="/"
+          to="/user/report"
           className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
           <ArrowLeft className="size-3.5" />

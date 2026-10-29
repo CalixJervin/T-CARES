@@ -1,4 +1,18 @@
+import {
+  Building2,
+  Bus,
+  CircleEllipsis,
+  Construction,
+  Lightbulb,
+  ShieldAlert,
+  Trash2,
+  Waves,
+  type LucideIcon,
+} from "lucide-react"
 import type { Category, Status } from "./types"
+
+// TODO: Confirm local emergency number with the city (e.g. Tuguegarao CDRRMO / Rescue 1111)
+export const EMERGENCY_NUMBER = "911 (confirm local number)"
 
 export const BARANGAYS = [
   "Centro 1",
@@ -33,6 +47,7 @@ export interface CategoryMeta {
   tagalog: string
   fullLabel: string
   color: string
+  icon: LucideIcon
 }
 
 export const CATEGORIES: Record<Category, CategoryMeta> = {
@@ -42,13 +57,23 @@ export const CATEGORIES: Record<Category, CategoryMeta> = {
     tagalog: "Kalsada at Bangketa",
     fullLabel: "Kalsada / Roads & Sidewalks",
     color: "#f97316", // orange
+    icon: Construction,
   },
-  streetlights_facilities: {
-    key: "streetlights_facilities",
-    name: "Streetlights & Facilities",
-    tagalog: "Ilaw at Pasilidad",
-    fullLabel: "Ilaw / Streetlights & Facilities",
+  streetlights: {
+    key: "streetlights",
+    name: "Streetlights",
+    tagalog: "Ilaw sa Kalye",
+    fullLabel: "Ilaw / Streetlights",
     color: "#eab308", // yellow
+    icon: Lightbulb,
+  },
+  public_facilities: {
+    key: "public_facilities",
+    name: "Public Facilities",
+    tagalog: "Pasilidad ng Publiko",
+    fullLabel: "Pasilidad / Public Facilities",
+    color: "#0284c7", // sky
+    icon: Building2,
   },
   drainage_flooding: {
     key: "drainage_flooding",
@@ -56,6 +81,7 @@ export const CATEGORIES: Record<Category, CategoryMeta> = {
     tagalog: "Kanal at Baha",
     fullLabel: "Kanal / Drainage & Flooding",
     color: "#06b6d4", // cyan
+    icon: Waves,
   },
   sanitation: {
     key: "sanitation",
@@ -63,13 +89,16 @@ export const CATEGORIES: Record<Category, CategoryMeta> = {
     tagalog: "Basura at Kalinisan",
     fullLabel: "Basura / Sanitation & Waste",
     color: "#10b981", // emerald
+    icon: Trash2,
   },
   transportation: {
     key: "transportation",
     name: "Transportation & Traffic",
+    // TODO: Confirm wording with local speaker (e.g. Tuguegarao local terms for transport & traffic)
     tagalog: "Trapiko at Sakayan",
     fullLabel: "Trapiko / Transportation & Traffic",
     color: "#6366f1", // indigo
+    icon: Bus,
   },
   public_safety: {
     key: "public_safety",
@@ -77,6 +106,7 @@ export const CATEGORIES: Record<Category, CategoryMeta> = {
     tagalog: "Kaligtasan ng Publiko",
     fullLabel: "Kaligtasan / Public Safety",
     color: "#ef4444", // red
+    icon: ShieldAlert,
   },
   other_services: {
     key: "other_services",
@@ -84,6 +114,7 @@ export const CATEGORIES: Record<Category, CategoryMeta> = {
     tagalog: "Iba Pang Serbisyo",
     fullLabel: "Iba pa / Other Services",
     color: "#8b5cf6", // purple
+    icon: CircleEllipsis,
   },
 }
 

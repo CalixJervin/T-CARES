@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react"
+import { Link } from "react-router-dom"
 import { CategoryBadge } from "@/components/common/CategoryBadge"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { BarangayChart } from "@/components/city/BarangayChart"
@@ -7,16 +8,18 @@ import { HotspotMap } from "@/components/city/HotspotMap"
 import { TicketDetailDrawer } from "@/components/city/TicketDetailDrawer"
 import { Button } from "@/components/ui/button"
 import { useApp } from "@/context/AppContext"
-import { CATEGORIES } from "@/lib/constants"
+import { CATEGORIES, DEPARTMENTS } from "@/lib/constants"
 import { getDaysOpen } from "@/lib/storage"
 import type { Category, Ticket } from "@/lib/types"
 import {
   AlertCircle,
+  ArrowLeft,
   ArrowUpDown,
   Building2,
   Calendar,
   Clock,
   Layers,
+  LogOut,
   MapPin,
   Search,
   ShieldCheck,
@@ -24,9 +27,17 @@ import {
 } from "lucide-react"
 
 export function CityStaffPage() {
-  const { tickets } = useApp()
+  const {
+    tickets,
+    isStaffAuthenticated,
+    staffDepartment,
+    loginAsStaff,
+    logoutStaff,
+  } = useApp()
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
-  const [isStaffLoggedIn, setIsStaffLoggedIn] = useState(true)
+  const [selectedDept, setSelectedDept] = useState<string>(
+    staffDepartment || DEPARTMENTS[0]
+  )
 
   // Filtering & Sorting
   const [statusFilter, setStatusFilter] = useState<string>("all")
@@ -116,29 +127,62 @@ export function CityStaffPage() {
     ? tickets.find((t) => t.id === selectedTicket.id) || selectedTicket
     : null
 
-  if (!isStaffLoggedIn) {
+  if (!isStaffAuthenticated) {
     return (
-      <main className="mx-auto my-12 max-w-lg p-6 text-center">
+      <main className="mx-auto my-12 max-w-lg p-6">
         <div className="rounded-2xl border border-border bg-card p-8 shadow-sm">
-          <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400">
             <Building2 className="size-6" />
           </div>
-          <h2 className="text-xl font-bold text-foreground">
-            Tuguegarao LGU Staff Portal
-          </h2>
-          <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-            Manage incoming citizen complaints, merge duplicates into master
-            tickets, assign responsible departments, and dispatch status
-            updates.
-          </p>
-          <div className="mt-6">
+          <div className="text-center">
+            <span className="rounded bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400">
+              City Staff Route • Authorized Only
+            </span>
+            <h2 className="mt-2.5 text-xl font-bold text-foreground">
+              Tuguegarao LGU Staff Portal
+            </h2>
+            <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+              This route is reserved for Tuguegarao city department staff and
+              dispatchers. Triage civic complaints, merge duplicates into master
+              tickets, and update statuses.
+            </p>
+          </div>
+
+          <div className="mt-6 space-y-4">
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-foreground">
+                Assigned Department
+              </label>
+              <select
+                value={selectedDept}
+                onChange={(e) => setSelectedDept(e.target.value)}
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium text-foreground focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
+              >
+                {DEPARTMENTS.map((dept) => (
+                  <option key={dept} value={dept}>
+                    {dept}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <Button
-              onClick={() => setIsStaffLoggedIn(true)}
-              className="h-10 w-full cursor-pointer gap-2 text-sm font-semibold"
+              onClick={() => loginAsStaff(selectedDept)}
+              className="h-10 w-full cursor-pointer gap-2 bg-amber-600 font-semibold text-white shadow-xs hover:bg-amber-700"
             >
               <ShieldCheck className="size-4" />
-              Enter demo as City staff
+              Sign In as City Staff ({selectedDept})
             </Button>
+
+            <div className="pt-2 text-center">
+              <Link
+                to="/user/report"
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <ArrowLeft className="size-3.5" />
+                Return to Citizen / User Portal
+              </Link>
+            </div>
           </div>
         </div>
       </main>
@@ -151,11 +195,11 @@ export function CityStaffPage() {
       <div className="flex flex-col justify-between gap-3 border-b border-border pb-4 sm:flex-row sm:items-center">
         <div>
           <div className="flex items-center gap-2">
-            <span className="rounded bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+            <span className="rounded bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
               Staff Command Center
             </span>
             <span className="font-mono text-xs text-muted-foreground">
-              Sample data
+              Route: /staff
             </span>
           </div>
           <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground">
@@ -170,8 +214,17 @@ export function CityStaffPage() {
         <div className="flex items-center gap-2">
           <span className="flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
             <span className="size-2 animate-pulse rounded-full bg-emerald-500" />
-            Active Session: City Staff (Demo)
+            Active Session: {staffDepartment}
           </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={logoutStaff}
+            className="cursor-pointer gap-1.5 border-border text-xs hover:bg-muted"
+          >
+            <LogOut className="size-3.5" />
+            Sign Out
+          </Button>
         </div>
       </div>
 
@@ -374,67 +427,79 @@ export function CityStaffPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filteredTickets.map((t) => {
-                const days = getDaysOpen(t)
-                const isOverdue = days > 7 && t.status !== "resolved"
-
-                return (
-                  <tr
-                    key={t.id}
-                    onClick={() => setSelectedTicket(t)}
-                    className="cursor-pointer transition-colors hover:bg-muted/40"
+              {filteredTickets.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={8}
+                    className="px-3 py-8 text-center text-xs text-muted-foreground"
                   >
-                    <td className="px-3 py-3 font-mono font-bold text-primary">
-                      {t.id}
-                    </td>
-                    <td className="px-3 py-3">
-                      <CategoryBadge category={t.category} variant="short" />
-                    </td>
-                    <td className="px-3 py-3 font-medium text-foreground">
-                      {t.barangay}
-                    </td>
-                    <td className="px-3 py-3 text-center">
-                      <span className="inline-flex items-center justify-center rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-xs font-bold text-primary">
-                        {t.reports.length}
-                      </span>
-                    </td>
-                    <td className="px-3 py-3">
-                      <StatusBadge status={t.status} />
-                    </td>
-                    <td className="px-3 py-3 text-muted-foreground">
-                      {t.department || (
-                        <span className="text-[11px] italic opacity-75">
-                          Unassigned
+                    No tickets yet. Newly submitted citizen reports will appear
+                    here.
+                  </td>
+                </tr>
+              ) : (
+                filteredTickets.map((t) => {
+                  const days = getDaysOpen(t)
+                  const isOverdue = days > 7 && t.status !== "resolved"
+
+                  return (
+                    <tr
+                      key={t.id}
+                      onClick={() => setSelectedTicket(t)}
+                      className="cursor-pointer transition-colors hover:bg-muted/40"
+                    >
+                      <td className="px-3 py-3 font-mono font-bold text-primary">
+                        {t.id}
+                      </td>
+                      <td className="px-3 py-3">
+                        <CategoryBadge category={t.category} variant="short" />
+                      </td>
+                      <td className="px-3 py-3 font-medium text-foreground">
+                        {t.barangay}
+                      </td>
+                      <td className="px-3 py-3 text-center">
+                        <span className="inline-flex items-center justify-center rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-xs font-bold text-primary">
+                          {t.reports.length}
                         </span>
-                      )}
-                    </td>
-                    <td className="px-3 py-3 text-right font-medium">
-                      <span
-                        className={
-                          isOverdue
-                            ? "font-bold text-red-500"
-                            : "text-foreground"
-                        }
-                      >
-                        {days}d
-                      </span>
-                    </td>
-                    <td className="px-3 py-3 text-right">
-                      <Button
-                        size="xs"
-                        variant="outline"
-                        className="h-7 cursor-pointer text-[11px]"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setSelectedTicket(t)
-                        }}
-                      >
-                        Manage
-                      </Button>
-                    </td>
-                  </tr>
-                )
-              })}
+                      </td>
+                      <td className="px-3 py-3">
+                        <StatusBadge status={t.status} />
+                      </td>
+                      <td className="px-3 py-3 text-muted-foreground">
+                        {t.department || (
+                          <span className="text-[11px] italic opacity-75">
+                            Unassigned
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-3 text-right font-medium">
+                        <span
+                          className={
+                            isOverdue
+                              ? "font-bold text-red-500"
+                              : "text-foreground"
+                          }
+                        >
+                          {days}d
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 text-right">
+                        <Button
+                          size="xs"
+                          variant="outline"
+                          className="h-7 cursor-pointer text-[11px]"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setSelectedTicket(t)
+                          }}
+                        >
+                          Manage
+                        </Button>
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
             </tbody>
           </table>
         </div>

@@ -66,10 +66,10 @@ export function MyReportsPage() {
             My Reports & Follows
           </h1>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            Real-time status updates for issues you reported or joined.
+            Real-time status updates for issues you reported.
           </p>
         </div>
-        <Link to="/">
+        <Link to="/user/report">
           <Button
             size="sm"
             className="cursor-pointer gap-1.5 text-xs font-semibold"
@@ -126,11 +126,10 @@ export function MyReportsPage() {
             No reports yet
           </h3>
           <p className="mx-auto mt-1 max-w-xs text-xs leading-relaxed text-muted-foreground">
-            When you submit a civic issue or follow an existing ticket, you will
-            track live status updates here.
+            Tickets will track live status updates here.
           </p>
           <div className="mt-4">
-            <Link to="/">
+            <Link to="/user/report">
               <Button className="cursor-pointer gap-2 text-xs">
                 <PlusCircle className="size-4" />
                 File your first complaint
@@ -225,7 +224,7 @@ export function MyReportsPage() {
                         Status Timeline
                       </div>
                       <Link
-                        to={`/t/${ticket.id}`}
+                        to={`/user/t/${ticket.id}`}
                         className="flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
                       >
                         Public link

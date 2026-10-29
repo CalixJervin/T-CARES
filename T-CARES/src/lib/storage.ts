@@ -14,7 +14,10 @@ const STORAGE_KEYS = {
   QUEUE: "ca_offline_queue_v1",
   NOTIFICATIONS: "ca_notifications_v1",
   SEEN_STATUSES: "ca_seen_statuses_v1",
+  SCHEMA_VERSION: "ca_schema_version",
 }
+
+const CURRENT_SCHEMA_VERSION = 3
 
 export function haversineDistanceMeters(
   lat1: number,
@@ -69,10 +72,24 @@ function notifyDataChange() {
 export function getTickets(): Ticket[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.TICKETS)
-    if (!raw) {
+    const storedVersion = parseInt(
+      localStorage.getItem(STORAGE_KEYS.SCHEMA_VERSION) || "1",
+      10
+    )
+
+    // Reset to blank state on schema version bump
+    if (!raw || storedVersion < CURRENT_SCHEMA_VERSION) {
       localStorage.setItem(STORAGE_KEYS.TICKETS, JSON.stringify(SEED_TICKETS))
+      localStorage.removeItem(STORAGE_KEYS.QUEUE)
+      localStorage.removeItem(STORAGE_KEYS.NOTIFICATIONS)
+      localStorage.removeItem(STORAGE_KEYS.SEEN_STATUSES)
+      localStorage.setItem(
+        STORAGE_KEYS.SCHEMA_VERSION,
+        CURRENT_SCHEMA_VERSION.toString()
+      )
       return SEED_TICKETS
     }
+
     return JSON.parse(raw) as Ticket[]
   } catch (err) {
     console.error("Failed to load tickets from localStorage:", err)
@@ -97,6 +114,10 @@ export function getTicketById(id: string): Ticket | undefined {
 export function resetDemoData(): void {
   try {
     localStorage.setItem(STORAGE_KEYS.TICKETS, JSON.stringify(SEED_TICKETS))
+    localStorage.setItem(
+      STORAGE_KEYS.SCHEMA_VERSION,
+      CURRENT_SCHEMA_VERSION.toString()
+    )
     localStorage.removeItem(STORAGE_KEYS.QUEUE)
     localStorage.removeItem(STORAGE_KEYS.NOTIFICATIONS)
     localStorage.removeItem(STORAGE_KEYS.SEEN_STATUSES)
@@ -327,7 +348,20 @@ export function markNotificationRead(id: string): void {
 export function getQueuedReports(): QueuedReport[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.QUEUE)
-    return raw ? JSON.parse(raw) : []
+    if (!raw) return []
+    const parsed = JSON.parse(raw) as (QueuedReport & { category: string })[]
+    let migrated = false
+    const items: QueuedReport[] = parsed.map((q) => {
+      if (q.category === ("streetlights_facilities" as string)) {
+        migrated = true
+        return { ...q, category: "streetlights" as Category }
+      }
+      return q as QueuedReport
+    })
+    if (migrated) {
+      localStorage.setItem(STORAGE_KEYS.QUEUE, JSON.stringify(items))
+    }
+    return items
   } catch {
     return []
   }

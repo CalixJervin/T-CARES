@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
 import { CategoryChart } from "@/components/city/CategoryChart"
 import { AvgDaysByCategoryChart } from "@/components/transparency/AvgDaysByCategoryChart"
 import { OpenTicketsByBarangayRanked } from "@/components/transparency/OpenTicketsByBarangayRanked"
 import { useApp } from "@/context/AppContext"
 import { getDaysOpen } from "@/lib/storage"
+import { pluralize } from "@/lib/utils"
 import {
   AlertCircle,
   Calendar,
@@ -23,15 +24,16 @@ export function TransparencyPage() {
     )
     const totalTickets = tickets.length
     const resolvedTickets = tickets.filter((t) => t.status === "resolved")
+    const resolvedTicketsCount = resolvedTickets.length
     const resolvedPct =
       totalTickets > 0
-        ? Math.round((resolvedTickets.length / totalTickets) * 100)
+        ? Math.round((resolvedTicketsCount / totalTickets) * 100)
         : 0
 
     let avgDays = 0
-    if (resolvedTickets.length > 0) {
+    if (resolvedTicketsCount > 0) {
       const sum = resolvedTickets.reduce((acc, t) => acc + getDaysOpen(t), 0)
-      avgDays = Number((sum / resolvedTickets.length).toFixed(1))
+      avgDays = Number((sum / resolvedTicketsCount).toFixed(1))
     }
 
     const openOver7Days = tickets.filter(
@@ -41,47 +43,67 @@ export function TransparencyPage() {
     return {
       totalReportsReceived,
       totalTickets,
+      resolvedTicketsCount,
       resolvedPct,
       avgDays,
       openOver7Days,
     }
   }, [tickets])
 
-  const [lastUpdated] = useState(() => {
-    return new Date().toLocaleDateString("en-US", {
+  // Most recent history timestamp among tickets
+  const lastUpdated = useMemo(() => {
+    let latestTime = 0
+    tickets.forEach((t) => {
+      t.history.forEach((h) => {
+        const time = new Date(h.at).getTime()
+        if (!isNaN(time) && time > latestTime) {
+          latestTime = time
+        }
+      })
+    })
+
+    if (!latestTime) {
+      tickets.forEach((t) => {
+        const time = new Date(t.createdAt).getTime()
+        if (!isNaN(time) && time > latestTime) {
+          latestTime = time
+        }
+      })
+    }
+
+    if (!latestTime) return "N/A"
+
+    return new Date(latestTime).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
     })
-  })
+  }, [tickets])
 
   return (
     <main className="mx-auto max-w-7xl animate-in space-y-6 p-4 pb-24 duration-200 fade-in sm:p-6">
       {/* Header */}
       <div className="flex flex-col justify-between gap-3 border-b border-border pb-4 sm:flex-row sm:items-center">
-        <div>
+        <div className="w-full">
           <div className="flex items-center gap-2">
-            <span className="rounded bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+            <span className="py-.5 text-xs text-primary opacity-60">
               Public Portal
             </span>
-            <span className="rounded border border-border bg-muted px-2 py-0.5 font-mono text-xs text-muted-foreground">
+          </div>
+          <div className="mt-1 flex w-full flex-wrap items-center gap-x-2.5 gap-y-1.5">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              Tuguegarao Civic Transparency & Accountability
+            </h1>
+            <span className="rounded-md border border-amber-500/40 bg-amber-500/10 px-2.5 py-0.5 font-mono text-xs font-bold text-amber-700 dark:text-amber-400">
               Sample data
             </span>
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground sm:ml-auto">
+              <Clock className="size-3.5 text-muted-foreground" />
+              <span>Last updated: {lastUpdated}</span>
+            </p>
           </div>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground">
-            Tuguegarao Civic Transparency & Accountability
-          </h1>
-          <p className="text-xs text-muted-foreground">
-            Aggregate accountability metrics and city planning data. 100%
-            anonymous public ledger.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Clock className="size-3.5" />
-          <span>Last updated: {lastUpdated}</span>
         </div>
       </div>
 
@@ -97,7 +119,8 @@ export function TransparencyPage() {
             {metrics.totalReportsReceived}
           </div>
           <div className="mt-1 text-[11px] text-muted-foreground">
-            Consolidated across {metrics.totalTickets} master tickets
+            Consolidated across{" "}
+            {pluralize(metrics.totalTickets, "master ticket")}
           </div>
         </div>
 
@@ -111,7 +134,8 @@ export function TransparencyPage() {
             {metrics.resolvedPct}%
           </div>
           <div className="mt-1 text-[11px] text-muted-foreground">
-            City resolution benchmark
+            {metrics.resolvedTicketsCount} of{" "}
+            {pluralize(metrics.totalTickets, "ticket")} resolved
           </div>
         </div>
 
@@ -124,11 +148,12 @@ export function TransparencyPage() {
           <div className="mt-1 text-3xl font-black text-foreground">
             {metrics.avgDays}{" "}
             <span className="text-xs font-normal text-muted-foreground">
-              days
+              {metrics.avgDays === 1 ? "day" : "days"}
             </span>
           </div>
           <div className="mt-1 text-[11px] text-muted-foreground">
-            Turnaround speed
+            Based on{" "}
+            {pluralize(metrics.resolvedTicketsCount, "resolved ticket")}
           </div>
         </div>
 
@@ -142,7 +167,7 @@ export function TransparencyPage() {
             {metrics.openOver7Days}
           </div>
           <div className="mt-1 text-[11px] text-red-600/80 dark:text-red-400/80">
-            Overdue issues flagged
+            {pluralize(metrics.openOver7Days, "overdue issue")} flagged
           </div>
         </div>
       </section>
@@ -165,12 +190,12 @@ export function TransparencyPage() {
       <div className="space-y-1 rounded-xl border border-border/80 bg-muted/40 p-4 text-center text-xs text-muted-foreground">
         <div className="flex items-center justify-center gap-1.5 font-semibold text-foreground">
           <ShieldCheck className="size-4 text-primary" />
-          Civic Transparency Guarantee
+          Transparency note
         </div>
         <p className="mx-auto max-w-xl text-[11px] leading-relaxed">
-          The app does not fix streetlights. It makes every complaint visible
-          and measurable so Tuguegarao City can respond faster and plan budgets
-          with real data.
+          The app does not fix streetlights. It makes every report visible and
+          measurable so Tuguegarao City can respond faster and plan budgets with
+          real data.
         </p>
       </div>
     </main>

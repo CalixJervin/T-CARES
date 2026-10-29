@@ -1,6 +1,7 @@
 export type Category =
   | "roads_sidewalks"
-  | "streetlights_facilities"
+  | "streetlights"
+  | "public_facilities"
   | "drainage_flooding"
   | "sanitation"
   | "transportation"

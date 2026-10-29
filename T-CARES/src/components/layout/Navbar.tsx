@@ -7,13 +7,12 @@ import {
   FileText,
   Moon,
   PlusCircle,
-  RotateCcw,
   Sun,
 } from "lucide-react"
 
 export function Navbar() {
   const { theme, setTheme } = useTheme()
-  const { resetDemo, unreadNotificationsCount, queuedCount } = useApp()
+  const { unreadNotificationsCount, queuedCount } = useApp()
 
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark")
@@ -25,7 +24,7 @@ export function Navbar() {
         {/* Brand */}
         <div className="flex items-center gap-3">
           <Link
-            to="/"
+            to="/user/report"
             className="group flex items-center gap-2 font-semibold tracking-tight text-foreground"
           >
             <div className="flex size-7 items-center justify-center rounded-lg bg-primary font-bold text-primary-foreground shadow-xs">
@@ -34,27 +33,24 @@ export function Navbar() {
             <div className="flex flex-col leading-none">
               <div className="flex items-center gap-1.5 text-sm font-bold">
                 CityAction
-                <span className="rounded bg-primary/10 px-1 py-0.5 text-[10px] font-medium text-primary">
-                  Tuguegarao
-                </span>
               </div>
               <span className="hidden text-[10px] text-muted-foreground sm:inline">
-                Complaints & Action Tracker
+                Citizen Portal
               </span>
             </div>
           </Link>
         </div>
 
-        {/* Navigation Switcher */}
+        {/* Navigation Switcher (Users Only) */}
         <nav className="flex items-center gap-1 sm:gap-2">
           {/* Citizen: Report */}
           <NavLink
-            to="/"
+            to="/user/report"
             end
             className={({ isActive }) =>
-              `flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
+              `flex items-center justify-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-medium transition-colors sm:px-4.5 ${
                 isActive
-                  ? "bg-primary text-primary-foreground shadow-xs"
+                  ? "bg-primary font-semibold text-primary-foreground shadow-xs"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
               }`
             }
@@ -66,7 +62,7 @@ export function Navbar() {
 
           {/* Citizen: My Reports */}
           <NavLink
-            to="/my"
+            to="/user/my"
             className={({ isActive }) =>
               `relative flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
                 isActive
@@ -88,27 +84,9 @@ export function Navbar() {
             )}
           </NavLink>
 
-          <div className="mx-1 h-4 w-px bg-border" />
-
-          {/* City Staff */}
+          {/* Citizen: Transparency */}
           <NavLink
-            to="/city"
-            className={({ isActive }) =>
-              `flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                isActive
-                  ? "bg-primary text-primary-foreground shadow-xs"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              }`
-            }
-          >
-            <Building2 className="size-3.5" />
-            <span className="hidden md:inline">City Staff</span>
-            <span className="md:hidden">Staff</span>
-          </NavLink>
-
-          {/* Transparency */}
-          <NavLink
-            to="/transparency"
+            to="/user/transparency"
             className={({ isActive }) =>
               `flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
                 isActive
@@ -123,16 +101,18 @@ export function Navbar() {
           </NavLink>
         </nav>
 
-        {/* Demo Controls: Reset + Theme */}
-        <div className="flex items-center gap-1 sm:gap-1.5">
-          <button
-            onClick={resetDemo}
-            title="Reset demo data to original 8 tickets"
-            className="flex cursor-pointer items-center gap-1 rounded-lg border border-border bg-background px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        {/* Action Controls: Staff Portal Switcher + Demo Controls */}
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Separate City Staff Route Switcher */}
+          <Link
+            to="/staff"
+            title="Switch to City Staff Portal"
+            className="flex items-center gap-1.5 rounded-lg border border-border bg-muted/70 px-2.5 py-1 text-xs font-semibold text-foreground transition-colors hover:bg-muted hover:text-primary"
           >
-            <RotateCcw className="size-3.2" />
-            <span className="hidden lg:inline">Reset demo data</span>
-          </button>
+            <Building2 className="size-3.5 text-primary" />
+            <span className="hidden sm:inline">City Staff</span>
+            <span className="sm:hidden">Staff</span>
+          </Link>
 
           <button
             onClick={toggleTheme}

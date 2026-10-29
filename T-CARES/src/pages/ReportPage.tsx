@@ -5,7 +5,12 @@ import { DuplicateSheet } from "@/components/citizen/DuplicateSheet"
 import { LocationPickerMap } from "@/components/citizen/LocationPickerMap"
 import { Button } from "@/components/ui/button"
 import { useApp } from "@/context/AppContext"
-import { BARANGAYS, CATEGORIES, DEFAULT_MAP_CENTER } from "@/lib/constants"
+import {
+  BARANGAYS,
+  CATEGORIES,
+  DEFAULT_MAP_CENTER,
+  EMERGENCY_NUMBER,
+} from "@/lib/constants"
 import { downscaleImage } from "@/lib/image"
 import { createSvgPlaceholder } from "@/lib/seed"
 import {
@@ -16,10 +21,13 @@ import {
 } from "@/lib/storage"
 import type { Category, Ticket } from "@/lib/types"
 import {
+  AlertCircle,
   Camera,
+  Check,
   CheckCircle2,
   ExternalLink,
   FileText,
+  Info,
   LocateFixed,
   MapPin,
   MessageSquare,
@@ -34,7 +42,8 @@ export function ReportPage() {
 
   // Form State
   const [photo, setPhoto] = useState<string | undefined>(undefined)
-  const [category, setCategory] = useState<Category>("streetlights_facilities")
+  const [category, setCategory] = useState<Category | null>(null)
+  const [categoryError, setCategoryError] = useState(false)
   const [barangay, setBarangay] = useState<string>("Centro 1")
   const [lat, setLat] = useState<number>(DEFAULT_MAP_CENTER.lat)
   const [lng, setLng] = useState<number>(DEFAULT_MAP_CENTER.lng)
@@ -57,6 +66,7 @@ export function ReportPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const categorySectionRef = useRef<HTMLElement>(null)
 
   // Photo handlers
   const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -146,6 +156,21 @@ export function ReportPage() {
       return
     }
 
+    // Category is required
+    if (!category) {
+      setCategoryError(true)
+      categorySectionRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      })
+      addToast({
+        title: "Category required",
+        description: "Pumili ng kategorya / Please choose a category.",
+        variant: "warning",
+      })
+      return
+    }
+
     // Ensure photo fallback if citizen did not take one
     const finalPhoto =
       photo ||
@@ -203,6 +228,7 @@ export function ReportPage() {
   }
 
   const proceedCreateNewTicket = (photoUrl?: string) => {
+    if (!category) return
     setIsSubmitting(true)
     try {
       const finalPhoto =
@@ -248,7 +274,7 @@ export function ReportPage() {
   }
 
   const handleFollowDuplicate = () => {
-    if (!duplicateCandidate) return
+    if (!duplicateCandidate || !category) return
     setIsSubmitting(true)
     try {
       const target = duplicateCandidate.ticket
@@ -292,6 +318,8 @@ export function ReportPage() {
 
   const handleResetForm = () => {
     setPhoto(undefined)
+    setCategory(null)
+    setCategoryError(false)
     setDescription("")
     setLandmark("")
     setContact("")
@@ -354,7 +382,7 @@ export function ReportPage() {
 
           {/* Links */}
           <div className="space-y-2.5 pt-2">
-            <Link to="/my" className="block">
+            <Link to="/user/my" className="block">
               <Button className="h-10 w-full cursor-pointer gap-2 bg-primary font-semibold text-primary-foreground shadow-xs">
                 <FileText className="size-4" />
                 View in My Reports
@@ -362,7 +390,7 @@ export function ReportPage() {
             </Link>
 
             {!submittedTicket.isOffline && (
-              <Link to={`/t/${t.id}`} className="block">
+              <Link to={`/user/t/${t.id}`} className="block">
                 <Button
                   variant="outline"
                   className="h-10 w-full cursor-pointer gap-2 border-border text-foreground hover:bg-muted"
@@ -378,7 +406,7 @@ export function ReportPage() {
               className="mt-3 inline-flex cursor-pointer items-center gap-1.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
               <PlusCircle className="size-3.5" />
-              File another complaint
+              File another report
             </button>
           </div>
         </div>
@@ -394,29 +422,22 @@ export function ReportPage() {
           <span className="text-[11px] font-semibold tracking-wider text-primary uppercase">
             Citizen Intake
           </span>
-          <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-            3-min report
-          </span>
         </div>
         <h1 className="mt-0.5 text-xl font-bold tracking-tight text-foreground">
           Report a Civic Issue
         </h1>
         <p className="text-xs text-muted-foreground">
-          Take a photo and drop a pin. Every ticket is publicly tracked in
-          Tuguegarao.
+          Take a photo and drop a pin.
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* 1. PHOTO FIRST */}
         <section className="rounded-xl border border-border bg-card p-3.5 shadow-xs">
-          <label className="mb-2 block flex items-center justify-between text-xs font-semibold text-foreground">
+          <label className="mb-2 flex items-center justify-between text-xs font-semibold text-foreground">
             <span className="flex items-center gap-1.5">
               <Camera className="size-3.5 text-primary" />
               1. Photo of Issue
-            </span>
-            <span className="text-[10px] font-normal text-muted-foreground">
-              Auto-compressed (&lt;100 KB)
             </span>
           </label>
 
@@ -458,41 +479,116 @@ export function ReportPage() {
                   <div className="text-xs font-semibold text-foreground">
                     Take photo or choose from gallery
                   </div>
-                  <div className="text-[10px] text-muted-foreground">
-                    Direct camera capture supported
-                  </div>
                 </div>
               </label>
             </div>
           )}
         </section>
 
+        {/* EMERGENCY NOTICE */}
+        <div className="flex items-start gap-2.5 rounded-xl border border-blue-500/25 bg-blue-500/10 p-3 text-xs text-blue-950 dark:border-blue-400/20 dark:bg-blue-950/40 dark:text-blue-100">
+          <Info
+            className="mt-0.5 size-4 shrink-0 text-blue-600 dark:text-blue-400"
+            aria-hidden="true"
+          />
+          <p className="leading-relaxed">
+            Hindi ito para sa emergency. Para sa emergency, tumawag sa{" "}
+            <strong className="font-semibold text-foreground underline decoration-blue-500/40">
+              {EMERGENCY_NUMBER}
+            </strong>
+            .
+          </p>
+        </div>
+
         {/* 2. CATEGORY CHIPS */}
-        <section className="rounded-xl border border-border bg-card p-3.5 shadow-xs">
-          <label className="mb-2 block text-xs font-semibold text-foreground">
-            2. Category (Kategorya)
-          </label>
-          <div className="grid grid-cols-2 gap-1.5">
+        <section
+          ref={categorySectionRef}
+          className={`rounded-xl border p-3.5 shadow-xs transition-colors ${
+            categoryError
+              ? "border-destructive bg-destructive/5 ring-1 ring-destructive"
+              : "border-border bg-card"
+          }`}
+        >
+          <div className="mb-2 flex items-center justify-between">
+            <label className="block text-xs font-semibold text-foreground">
+              2. Category (Kategorya){" "}
+              <span className="text-destructive">*</span>
+            </label>
+            <span className="text-[10px] text-muted-foreground">
+              Pumili ng isa / Select one
+            </span>
+          </div>
+
+          {categoryError && (
+            <div
+              role="alert"
+              className="mb-2.5 flex items-center gap-1.5 rounded-lg border border-destructive/30 bg-destructive/10 px-2.5 py-1.5 text-xs font-semibold text-destructive"
+            >
+              <AlertCircle className="size-3.5 shrink-0" aria-hidden="true" />
+              <span>Pumili ng kategorya / Please choose a category</span>
+            </div>
+          )}
+
+          <div
+            role="radiogroup"
+            aria-label="Category of issue"
+            className="grid grid-cols-2 gap-2"
+          >
             {(Object.keys(CATEGORIES) as Category[]).map((catKey) => {
               const meta = CATEGORIES[catKey]
+              const Icon = meta.icon
               const isSelected = category === catKey
               return (
                 <button
                   type="button"
                   key={catKey}
-                  onClick={() => setCategory(catKey)}
-                  className={`flex cursor-pointer flex-col rounded-lg border p-2.5 text-left text-xs transition-all ${
+                  role="radio"
+                  aria-checked={isSelected}
+                  aria-pressed={isSelected}
+                  onClick={() => {
+                    setCategory(catKey)
+                    setCategoryError(false)
+                  }}
+                  className={`group relative flex min-h-[58px] cursor-pointer items-center justify-between rounded-xl border p-2.5 text-left transition-all focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none ${
                     isSelected
-                      ? "border-primary bg-primary/10 font-semibold text-primary ring-1 ring-primary"
-                      : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
+                      ? "border-primary bg-primary/10 text-foreground shadow-xs ring-1 ring-primary"
+                      : "border-border bg-card text-foreground hover:border-border/80 hover:bg-muted/40"
                   }`}
                 >
-                  <span className="leading-tight font-medium">
-                    {meta.tagalog}
-                  </span>
-                  <span className="mt-0.5 text-[10px] leading-tight opacity-75">
-                    {meta.name}
-                  </span>
+                  <div className="flex min-w-0 items-center gap-2.5 pr-4">
+                    <div
+                      className={`flex size-7 shrink-0 items-center justify-center rounded-lg transition-colors ${
+                        isSelected
+                          ? "bg-primary text-primary-foreground shadow-xs"
+                          : "bg-muted text-foreground group-hover:bg-muted/80"
+                      }`}
+                    >
+                      <Icon className="size-4 shrink-0" aria-hidden="true" />
+                    </div>
+                    <div className="flex min-w-0 flex-col">
+                      <span className="truncate text-xs leading-tight font-bold text-foreground">
+                        {meta.tagalog}
+                      </span>
+                      <span
+                        className={`truncate text-[11px] leading-tight ${
+                          isSelected
+                            ? "font-semibold text-foreground/90"
+                            : "font-medium text-muted-foreground"
+                        }`}
+                      >
+                        {meta.name}
+                      </span>
+                    </div>
+                  </div>
+
+                  {isSelected && (
+                    <div className="absolute top-2 right-2 flex size-4 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xs">
+                      <Check
+                        className="size-2.5 stroke-[3]"
+                        aria-hidden="true"
+                      />
+                    </div>
+                  )}
                 </button>
               )
             })}
@@ -683,6 +779,7 @@ export function ReportPage() {
           distanceMeters={duplicateCandidate.distance}
           onFollowExisting={handleFollowDuplicate}
           onCreateNew={() => {
+            if (!category) return
             const finalPhoto =
               photo ||
               createSvgPlaceholder(

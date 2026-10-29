@@ -34,6 +34,10 @@ interface AppContextType {
   resetDemo: () => void
   notifications: NotificationItem[]
   unreadNotificationsCount: number
+  isStaffAuthenticated: boolean
+  staffDepartment: string
+  loginAsStaff: (department?: string) => void
+  logoutStaff: () => void
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined)
@@ -51,6 +55,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     getNotifications()
   )
   const [toasts, setToasts] = useState<ToastMessage[]>([])
+  const [isStaffAuthenticated, setIsStaffAuthenticated] = useState<boolean>(
+    () => {
+      try {
+        return localStorage.getItem("ca_staff_authenticated") === "true"
+      } catch {
+        return false
+      }
+    }
+  )
+  const [staffDepartment, setStaffDepartment] = useState<string>(() => {
+    try {
+      return localStorage.getItem("ca_staff_department") || "General Services"
+    } catch {
+      return "General Services"
+    }
+  })
 
   const removeToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id))
@@ -66,6 +86,39 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     },
     [removeToast]
   )
+
+  const loginAsStaff = useCallback(
+    (dept: string = "General Services") => {
+      setIsStaffAuthenticated(true)
+      setStaffDepartment(dept)
+      try {
+        localStorage.setItem("ca_staff_authenticated", "true")
+        localStorage.setItem("ca_staff_department", dept)
+      } catch {
+        // ignore storage errors
+      }
+      addToast({
+        title: "Staff Session Active",
+        description: `Signed in as City Staff (${dept}).`,
+        variant: "success",
+      })
+    },
+    [addToast]
+  )
+
+  const logoutStaff = useCallback(() => {
+    setIsStaffAuthenticated(false)
+    try {
+      localStorage.removeItem("ca_staff_authenticated")
+    } catch {
+      // ignore storage errors
+    }
+    addToast({
+      title: "Staff Session Ended",
+      description: "You have been signed out of City Staff portal.",
+      variant: "default",
+    })
+  }, [addToast])
 
   const refreshData = useCallback(() => {
     const updatedTickets = getTickets()
@@ -189,6 +242,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         resetDemo,
         notifications,
         unreadNotificationsCount,
+        isStaffAuthenticated,
+        staffDepartment,
+        loginAsStaff,
+        logoutStaff,
       }}
     >
       {children}

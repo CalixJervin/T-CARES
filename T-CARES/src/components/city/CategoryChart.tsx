@@ -22,15 +22,13 @@ const chartConfig: ChartConfig = {
 
 export function CategoryChart({ tickets }: CategoryChartProps) {
   const data = useMemo(() => {
-    const counts: Record<Category, number> = {
-      roads_sidewalks: 0,
-      streetlights_facilities: 0,
-      drainage_flooding: 0,
-      sanitation: 0,
-      transportation: 0,
-      public_safety: 0,
-      other_services: 0,
-    }
+    const counts = (Object.keys(CATEGORIES) as Category[]).reduce(
+      (acc, key) => {
+        acc[key] = 0
+        return acc
+      },
+      {} as Record<Category, number>
+    )
 
     tickets.forEach((t) => {
       if (counts[t.category] !== undefined) {
@@ -41,7 +39,7 @@ export function CategoryChart({ tickets }: CategoryChartProps) {
     return (Object.keys(CATEGORIES) as Category[]).map((cat) => ({
       category: CATEGORIES[cat].name.split("&")[0].trim(),
       fullName: CATEGORIES[cat].name,
-      tickets: counts[cat],
+      tickets: counts[cat] || 0,
       fill: CATEGORIES[cat].color,
     }))
   }, [tickets])
