@@ -9,7 +9,7 @@ import { TicketDetailDrawer } from "@/components/city/TicketDetailDrawer"
 import { Button } from "@/components/ui/button"
 import { useApp } from "@/context/AppContext"
 import { CATEGORIES, DEPARTMENTS } from "@/lib/constants"
-import { getDaysOpen } from "@/lib/storage"
+import { deleteTicket, getDaysOpen } from "@/lib/storage"
 import type { Category, Ticket } from "@/lib/types"
 import {
   AlertCircle,
@@ -22,6 +22,7 @@ import {
   MapPin,
   Search,
   ShieldCheck,
+  Trash2,
   TrendingUp,
 } from "lucide-react"
 
@@ -31,6 +32,8 @@ export function CityStaffPage() {
     isStaffAuthenticated,
     staffDepartment,
     loginAsStaff,
+    addToast,
+    refreshData,
   } = useApp()
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
   const [selectedDept, setSelectedDept] = useState<string>(
@@ -117,6 +120,25 @@ export function CityStaffPage() {
     } else {
       setSortBy(col)
       setSortOrder("desc")
+    }
+  }
+
+  const handleDeleteTicket = (ticketId: string) => {
+    if (
+      window.confirm(
+        `Are you sure you want to delete ticket ${ticketId}? This action cannot be undone.`
+      )
+    ) {
+      deleteTicket(ticketId)
+      if (selectedTicket?.id === ticketId) {
+        setSelectedTicket(null)
+      }
+      refreshData()
+      addToast({
+        title: `Ticket ${ticketId} Deleted`,
+        description: "The ticket has been permanently removed.",
+        variant: "default",
+      })
     }
   }
 
@@ -283,17 +305,45 @@ export function CityStaffPage() {
       </section>
 
       {/* HOTSPOT MAP */}
-      <section className="space-y-2">
-        <div className="flex items-center justify-between">
+      <section className="space-y-2.5">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="flex items-center gap-1.5 text-sm font-bold tracking-wider text-foreground uppercase">
-              <MapPin className="size-4 text-primary" />
-              Tuguegarao Complaint Hotspot Map
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="flex items-center gap-1.5 text-sm font-bold tracking-wider text-foreground uppercase">
+                <MapPin className="size-4 text-primary" />
+                Tuguegarao Complaint Hotspot Map
+              </h2>
+              <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
+                📍 {tickets.length} {tickets.length === 1 ? "active pin" : "active pins"}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Geographic distribution of citizen reports across Tuguegarao barangays.
+            </p>
+          </div>
+
+          {/* Map Status Legend - Positioned in header so it never obstructs map pins or popups */}
+          <div className="flex flex-wrap items-center gap-2.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs shadow-xs">
+            <span className="text-[10px] font-bold text-muted-foreground uppercase">
+              Legend:
+            </span>
+            <span className="flex items-center gap-1 text-[11px] font-medium text-foreground">
+              <span className="size-2 rounded-full bg-slate-500" /> Received
+            </span>
+            <span className="flex items-center gap-1 text-[11px] font-medium text-foreground">
+              <span className="size-2 rounded-full bg-blue-600" /> Assigned
+            </span>
+            <span className="flex items-center gap-1 text-[11px] font-medium text-foreground">
+              <span className="size-2 rounded-full bg-amber-500" /> In Progress
+            </span>
+            <span className="flex items-center gap-1 text-[11px] font-medium text-foreground">
+              <span className="size-2 rounded-full bg-emerald-500" /> Resolved
+            </span>
           </div>
         </div>
         <HotspotMap
           tickets={tickets}
+          selectedTicketId={selectedTicket?.id}
           onSelectTicket={(t) => setSelectedTicket(t)}
         />
       </section>
@@ -458,17 +508,31 @@ export function CityStaffPage() {
                         </span>
                       </td>
                       <td className="px-3 py-3 text-right">
-                        <Button
-                          size="xs"
-                          variant="outline"
-                          className="h-7 cursor-pointer text-[11px]"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setSelectedTicket(t)
-                          }}
-                        >
-                          Manage
-                        </Button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button
+                            size="xs"
+                            variant="outline"
+                            className="h-7 cursor-pointer text-[11px]"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedTicket(t)
+                            }}
+                          >
+                            Manage
+                          </Button>
+                          <Button
+                            size="xs"
+                            variant="ghost"
+                            title={`Delete ticket ${t.id}`}
+                            className="size-7 cursor-pointer p-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDeleteTicket(t.id)
+                            }}
+                          >
+                            <Trash2 className="size-3.5" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   )

@@ -312,6 +312,21 @@ export function updateTicketStaff(
   return ticket
 }
 
+export function deleteTicket(ticketId: string): void {
+  const tickets = getTickets()
+  const remaining = tickets.filter((t) => t.id !== ticketId)
+  saveTickets(remaining)
+
+  try {
+    const notifs = getNotifications().filter((n) => n.ticketId !== ticketId)
+    localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(notifs))
+  } catch {
+    // ignore
+  }
+
+  notifyDataChange()
+}
+
 // Notifications
 export function getNotifications(): NotificationItem[] {
   try {

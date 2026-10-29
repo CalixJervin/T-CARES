@@ -1,18 +1,22 @@
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { MapContainer, Marker, TileLayer, useMap } from "react-leaflet"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { Button } from "@/components/ui/button"
 import { useApp } from "@/context/AppContext"
 import { DEPARTMENTS } from "@/lib/constants"
-import { getDaysOpen, updateTicketStaff } from "@/lib/storage"
+import { createLocationPinIcon } from "@/lib/map-icons"
+import { deleteTicket, getDaysOpen, updateTicketStaff } from "@/lib/storage"
 import type { Status, Ticket } from "@/lib/types"
 import {
   Building2,
   Clock,
+  ExternalLink,
   Layers,
   MapPin,
   MessageSquare,
   Phone,
   Save,
+  Trash2,
   Users,
   X,
 } from "lucide-react"
@@ -20,6 +24,18 @@ import {
 interface TicketDetailDrawerProps {
   ticket: Ticket
   onClose: () => void
+}
+
+function DrawerMapUpdater({ lat, lng }: { lat: number; lng: number }) {
+  const map = useMap()
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      map.invalidateSize()
+      map.setView([lat, lng], 16, { animate: false })
+    }, 150)
+    return () => clearTimeout(timer)
+  }, [lat, lng, map])
+  return null
 }
 
 export function TicketDetailDrawer({
@@ -31,9 +47,22 @@ export function TicketDetailDrawer({
   const [department, setDepartment] = useState<string>(ticket.department || "")
   const [note, setNote] = useState<string>("")
   const [isUpdating, setIsUpdating] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
+  const pinIcon = useMemo(() => createLocationPinIcon(), [])
   const daysOpen = getDaysOpen(ticket)
   const isOverdue = daysOpen > 7 && ticket.status !== "resolved"
+
+  const handleDelete = () => {
+    deleteTicket(ticket.id)
+    refreshData()
+    addToast({
+      title: `Ticket ${ticket.id} Deleted`,
+      description: "The ticket has been permanently removed.",
+      variant: "default",
+    })
+    onClose()
+  }
 
   const handleUpdate = (e: React.FormEvent) => {
     e.preventDefault()
@@ -127,6 +156,52 @@ export function TicketDetailDrawer({
               CityAction clusters nearby reports into this single master ticket.
               All {ticket.followers.length} citizen followers receive updates.
             </p>
+          </div>
+
+          {/* Pinned Issue Location Map */}
+          <div className="rounded-xl border border-border bg-card p-4 shadow-xs">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-xs font-bold tracking-wider text-foreground uppercase">
+                <MapPin className="size-3.5 text-primary" />
+                Pinned Location — {ticket.barangay}
+              </div>
+              <a
+                href={`https://www.google.com/maps?q=${ticket.lat},${ticket.lng}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
+              >
+                <span>Google Maps</span>
+                <ExternalLink className="size-3" />
+              </a>
+            </div>
+
+            <div className="mt-2.5 relative h-48 w-full overflow-hidden rounded-lg border border-border">
+              <MapContainer
+                center={[ticket.lat, ticket.lng]}
+                zoom={16}
+                scrollWheelZoom={false}
+                className="z-0 h-full w-full"
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                <DrawerMapUpdater lat={ticket.lat} lng={ticket.lng} />
+                <Marker position={[ticket.lat, ticket.lng]} icon={pinIcon} />
+              </MapContainer>
+            </div>
+
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted-foreground">
+              <span className="font-mono">
+                GPS: {ticket.lat.toFixed(5)}, {ticket.lng.toFixed(5)}
+              </span>
+              {ticket.reports[0]?.landmark && (
+                <span className="truncate font-medium text-foreground">
+                  Landmark: {ticket.reports[0].landmark}
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Staff Action Box */}
@@ -303,6 +378,52 @@ export function TicketDetailDrawer({
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Danger Zone: Delete Ticket */}
+          <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 shadow-xs">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h4 className="flex items-center gap-1.5 text-xs font-bold tracking-wider text-destructive uppercase">
+                  <Trash2 className="size-3.5" />
+                  Delete Master Ticket
+                </h4>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  Permanently remove this ticket and its {ticket.reports.length} citizen report(s).
+                </p>
+              </div>
+
+              {showDeleteConfirm ? (
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="xs"
+                    variant="outline"
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className="h-8 cursor-pointer text-xs"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="xs"
+                    variant="destructive"
+                    onClick={handleDelete}
+                    className="h-8 cursor-pointer text-xs font-semibold"
+                  >
+                    Confirm Delete
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  size="xs"
+                  variant="outline"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="h-8 cursor-pointer border-destructive/40 text-xs font-medium text-destructive hover:bg-destructive/10"
+                >
+                  <Trash2 className="mr-1 size-3.5" />
+                  Delete Ticket
+                </Button>
+              )}
             </div>
           </div>
         </div>

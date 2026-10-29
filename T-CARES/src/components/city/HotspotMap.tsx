@@ -1,4 +1,6 @@
-import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet"
+import { useEffect } from "react"
+import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet"
+import L from "leaflet"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { Button } from "@/components/ui/button"
 import { DEFAULT_MAP_CENTER } from "@/lib/constants"
@@ -9,10 +11,64 @@ import { ExternalLink, Users } from "lucide-react"
 
 interface HotspotMapProps {
   tickets: Ticket[]
+  selectedTicketId?: string
   onSelectTicket: (ticket: Ticket) => void
 }
 
-export function HotspotMap({ tickets, onSelectTicket }: HotspotMapProps) {
+function MapController({
+  tickets,
+  selectedTicketId,
+}: {
+  tickets: Ticket[]
+  selectedTicketId?: string
+}) {
+  const map = useMap()
+
+  // Invalidate map size so Leaflet tiles and viewport calculate correctly
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      map.invalidateSize()
+    }, 150)
+    return () => clearTimeout(timer)
+  }, [map])
+
+  // Center on selected ticket if requested
+  useEffect(() => {
+    if (!selectedTicketId) return
+    const target = tickets.find((t) => t.id === selectedTicketId)
+    if (target) {
+      map.setView([target.lat, target.lng], 16, { animate: true })
+    }
+  }, [selectedTicketId, tickets, map])
+
+  // Automatically fit bounds whenever the ticket collection updates
+  useEffect(() => {
+    if (selectedTicketId) return
+
+    if (tickets.length === 0) {
+      map.setView([DEFAULT_MAP_CENTER.lat, DEFAULT_MAP_CENTER.lng], 14, {
+        animate: true,
+      })
+      return
+    }
+
+    if (tickets.length === 1) {
+      map.setView([tickets[0].lat, tickets[0].lng], 15, { animate: true })
+      return
+    }
+
+    const bounds = L.latLngBounds(tickets.map((t) => [t.lat, t.lng]))
+    map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16, animate: true })
+  }, [tickets, selectedTicketId, map])
+
+  return null
+}
+
+export function HotspotMap({
+  tickets,
+  selectedTicketId,
+  onSelectTicket,
+}: HotspotMapProps) {
   const center: [number, number] = [
     DEFAULT_MAP_CENTER.lat,
     DEFAULT_MAP_CENTER.lng,
@@ -29,6 +85,11 @@ export function HotspotMap({ tickets, onSelectTicket }: HotspotMapProps) {
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+
+        <MapController
+          tickets={tickets}
+          selectedTicketId={selectedTicketId}
         />
 
         {tickets.map((t) => {
@@ -80,9 +141,9 @@ export function HotspotMap({ tickets, onSelectTicket }: HotspotMapProps) {
                   <Button
                     size="xs"
                     onClick={() => onSelectTicket(t)}
-                    className="mt-1 w-full cursor-pointer gap-1 text-[11px]"
+                    className="mt-1.5 w-full cursor-pointer gap-1 text-[11px] font-semibold"
                   >
-                    Open Ticket Detail
+                    Manage Ticket
                     <ExternalLink className="size-3" />
                   </Button>
                 </div>
@@ -91,22 +152,6 @@ export function HotspotMap({ tickets, onSelectTicket }: HotspotMapProps) {
           )
         })}
       </MapContainer>
-
-      {/* Map Legend */}
-      <div className="pointer-events-none absolute right-2 bottom-2 z-[400] flex flex-wrap gap-2 rounded-lg border border-border/70 bg-background/95 p-2 text-[10px] shadow-sm backdrop-blur-xs">
-        <span className="flex items-center gap-1">
-          <span className="size-2 rounded-full bg-slate-500" /> Received
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="size-2 rounded-full bg-blue-600" /> Assigned
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="size-2 rounded-full bg-amber-500" /> In Progress
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="size-2 rounded-full bg-emerald-500" /> Resolved
-        </span>
-      </div>
     </div>
   )
 }

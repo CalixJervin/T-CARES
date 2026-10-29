@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { useApp } from "@/context/AppContext"
 import {
   BARANGAYS,
+  BARANGAY_COORDINATES,
   CATEGORIES,
   DEFAULT_MAP_CENTER,
   EMERGENCY_NUMBER,
@@ -638,7 +639,15 @@ export function ReportPage() {
             <select
               id="barangay-select"
               value={barangay}
-              onChange={(e) => setBarangay(e.target.value)}
+              onChange={(e) => {
+                const nextBgy = e.target.value
+                setBarangay(nextBgy)
+                const coords = BARANGAY_COORDINATES[nextBgy]
+                if (coords) {
+                  setLat(coords.lat)
+                  setLng(coords.lng)
+                }
+              }}
               required
               className="w-full cursor-pointer rounded-lg border border-border bg-background px-3 py-2 text-xs text-foreground focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
             >

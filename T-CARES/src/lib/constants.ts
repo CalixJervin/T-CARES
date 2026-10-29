@@ -27,6 +27,21 @@ export const BARANGAYS = [
   "Linao East",
 ] as const
 
+export type Barangay = (typeof BARANGAYS)[number]
+
+export const BARANGAY_COORDINATES: Record<string, { lat: number; lng: number }> = {
+  "Centro 1": { lat: 17.6131, lng: 121.727 },
+  "Centro 2": { lat: 17.6158, lng: 121.729 },
+  Carig: { lat: 17.652, lng: 121.751 },
+  "Ugac Norte": { lat: 17.608, lng: 121.719 },
+  "Ugac Sur": { lat: 17.6015, lng: 121.713 },
+  "Atulayan Norte": { lat: 17.621, lng: 121.72 },
+  "Caritan Norte": { lat: 17.632, lng: 121.726 },
+  "Annafunan East": { lat: 17.641, lng: 121.737 },
+  Buntun: { lat: 17.6135, lng: 121.693 },
+  "Linao East": { lat: 17.634, lng: 121.706 },
+}
+
 export const DEPARTMENTS = [
   "City Engineering",
   "General Services",
