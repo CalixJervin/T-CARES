@@ -18,11 +18,18 @@ export function createLocationPinIcon() {
   })
 }
 
-export function createTicketMarkerIcon(status: Status, reportCount: number) {
+export function createTicketMarkerIcon(
+  status: Status,
+  reportCount: number,
+  isHazard?: boolean
+) {
   const meta = STATUS_META[status] || STATUS_META.received
   const baseSize = 26
   // Sized by report count: 1 report is 26px, 5 reports is 34px, max 40px
   const size = Math.min(42, baseSize + Math.min(reportCount - 1, 6) * 3)
+  const hazardOutline = isHazard
+    ? "outline: 3px solid #ef4444; outline-offset: 2px; box-shadow: 0 0 8px rgba(239, 68, 68, 0.6), 0 4px 10px rgba(0,0,0,0.3);"
+    : "box-shadow: 0 4px 10px rgba(0,0,0,0.3);"
 
   return L.divIcon({
     className: "ticket-marker-pin",
@@ -34,7 +41,7 @@ export function createTicketMarkerIcon(status: Status, reportCount: number) {
         background-color: ${meta.markerColor};
         border-radius: 50%;
         border: 2.5px solid #ffffff;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        ${hazardOutline}
         display: flex;
         align-items: center;
         justify-content: center;

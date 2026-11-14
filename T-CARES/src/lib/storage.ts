@@ -1,3 +1,9 @@
+import {
+  HAZARD_HISTORY_CLEARED,
+  HAZARD_HISTORY_MARKED,
+  REOPEN_ON_NOT_FIXED,
+  RESIDENT_CHECK_REOPEN_HISTORY,
+} from "./constants"
 import { SEED_TICKETS } from "./seed"
 import type {
   Category,
@@ -17,7 +23,7 @@ const STORAGE_KEYS = {
   SCHEMA_VERSION: "ca_schema_version",
 }
 
-const CURRENT_SCHEMA_VERSION = 3
+const CURRENT_SCHEMA_VERSION = 4
 
 export function haversineDistanceMeters(
   lat1: number,
@@ -90,7 +96,13 @@ export function getTickets(): Ticket[] {
       return SEED_TICKETS
     }
 
-    return JSON.parse(raw) as Ticket[]
+    const parsed = JSON.parse(raw) as Ticket[]
+    return parsed.map((t) => ({
+      ...t,
+      hazard: t.hazard ?? false,
+      reopenCount: t.reopenCount ?? 0,
+      resolutionCheck: t.resolutionCheck ?? { responses: [] },
+    }))
   } catch (err) {
     console.error("Failed to load tickets from localStorage:", err)
     return SEED_TICKETS
@@ -154,6 +166,7 @@ export function addReportToTicket(
     photo?: string
     contactType: "phone" | "messenger"
     contact: string
+    hazard?: boolean
   },
   reporterId: string
 ): { ticket: Ticket; report: Report } {
@@ -175,9 +188,14 @@ export function addReportToTicket(
     contact: reportData.contact,
     reporterId,
     synced: true,
+    hazard: reportData.hazard,
   }
 
   ticket.reports.push(report)
+  if (reportData.hazard) {
+    ticket.hazard = true
+  }
+
   if (!ticket.followers.includes(reporterId)) {
     ticket.followers.push(reporterId)
   }
@@ -198,6 +216,7 @@ export function createNewTicket(
     photo?: string
     contactType: "phone" | "messenger"
     contact: string
+    hazard?: boolean
   },
   reporterId: string
 ): { ticket: Ticket; report: Report } {
@@ -225,6 +244,7 @@ export function createNewTicket(
     contact: data.contact,
     reporterId,
     synced: true,
+    hazard: data.hazard,
   }
 
   const newTicket: Ticket = {
@@ -235,6 +255,9 @@ export function createNewTicket(
     lng: data.lng,
     status: "received",
     createdAt: new Date().toISOString(),
+    hazard: data.hazard ?? false,
+    reopenCount: 0,
+    resolutionCheck: { responses: [] },
     reports: [report],
     followers: [reporterId],
     history: [
@@ -257,6 +280,7 @@ export function updateTicketStaff(
     status?: Status
     department?: string
     note?: string
+    hazard?: boolean
   }
 ): Ticket {
   const tickets = getTickets()
@@ -278,9 +302,29 @@ export function updateTicketStaff(
     ticket.status = updates.status
     if (updates.status === "resolved") {
       ticket.resolvedAt = now
+      // start fresh resolutionCheck while retaining previous records
+      if (
+        ticket.resolutionCheck &&
+        ticket.resolutionCheck.responses.length > 0
+      ) {
+        ticket.previousResolutionChecks = [
+          ...(ticket.previousResolutionChecks || []),
+          ticket.resolutionCheck,
+        ]
+      }
+      ticket.resolutionCheck = { responses: [] }
     } else {
       ticket.resolvedAt = undefined
     }
+  }
+
+  if (updates.hazard !== undefined && updates.hazard !== ticket.hazard) {
+    ticket.hazard = updates.hazard
+    ticket.history.push({
+      status: ticket.status,
+      note: updates.hazard ? HAZARD_HISTORY_MARKED : HAZARD_HISTORY_CLEARED,
+      at: now,
+    })
   }
 
   // Append history if status changed or note provided
@@ -310,6 +354,83 @@ export function updateTicketStaff(
   tickets[ticketIndex] = ticket
   saveTickets(tickets)
   return ticket
+}
+
+export function toggleTicketHazard(ticketId: string): Ticket {
+  const tickets = getTickets()
+  const ticketIndex = tickets.findIndex((t) => t.id === ticketId)
+  if (ticketIndex === -1) {
+    throw new Error(`Ticket ${ticketId} not found`)
+  }
+
+  const ticket = { ...tickets[ticketIndex] }
+  const now = new Date().toISOString()
+  ticket.hazard = !ticket.hazard
+  ticket.history.push({
+    status: ticket.status,
+    note: ticket.hazard ? HAZARD_HISTORY_MARKED : HAZARD_HISTORY_CLEARED,
+    at: now,
+  })
+
+  tickets[ticketIndex] = ticket
+  saveTickets(tickets)
+  return ticket
+}
+
+export function recordResidentResolutionResponse(
+  ticketId: string,
+  reporterId: string,
+  answer: "fixed" | "not_fixed"
+): { ticket: Ticket; reopened: boolean } {
+  const tickets = getTickets()
+  const ticketIndex = tickets.findIndex((t) => t.id === ticketId)
+  if (ticketIndex === -1) {
+    throw new Error(`Ticket ${ticketId} not found`)
+  }
+
+  const ticket = { ...tickets[ticketIndex] }
+  const now = new Date().toISOString()
+  const responses = ticket.resolutionCheck?.responses
+    ? [...ticket.resolutionCheck.responses]
+    : []
+
+  const existingIdx = responses.findIndex((r) => r.reporterId === reporterId)
+  if (existingIdx >= 0) {
+    responses[existingIdx] = { reporterId, answer, at: now }
+  } else {
+    responses.push({ reporterId, answer, at: now })
+  }
+  ticket.resolutionCheck = { responses }
+
+  const notFixedCount = responses.filter((r) => r.answer === "not_fixed").length
+  let reopened = false
+
+  if (notFixedCount >= REOPEN_ON_NOT_FIXED) {
+    const oldStatus = ticket.status
+    ticket.status = "in_progress"
+    ticket.resolvedAt = undefined
+    ticket.reopenCount = (ticket.reopenCount || 0) + 1
+    ticket.history.push({
+      status: "in_progress",
+      note: RESIDENT_CHECK_REOPEN_HISTORY,
+      at: now,
+    })
+
+    recordNotification({
+      id: "notif_" + Math.random().toString(36).substring(2, 9),
+      ticketId: ticket.id,
+      oldStatus,
+      newStatus: "in_progress",
+      note: RESIDENT_CHECK_REOPEN_HISTORY,
+      timestamp: now,
+      read: false,
+    })
+    reopened = true
+  }
+
+  tickets[ticketIndex] = ticket
+  saveTickets(tickets)
+  return { ticket, reopened }
 }
 
 export function deleteTicket(ticketId: string): void {
@@ -421,6 +542,7 @@ export function processOfflineQueue(): {
           photo: item.photo,
           contactType: item.contactType,
           contact: item.contact,
+          hazard: item.hazard,
         },
         item.reporterId
       )
@@ -437,6 +559,7 @@ export function processOfflineQueue(): {
             photo: item.photo,
             contactType: item.contactType,
             contact: item.contact,
+            hazard: item.hazard,
           },
           item.reporterId
         )
@@ -453,6 +576,7 @@ export function processOfflineQueue(): {
             photo: item.photo,
             contactType: item.contactType,
             contact: item.contact,
+            hazard: item.hazard,
           },
           item.reporterId
         )

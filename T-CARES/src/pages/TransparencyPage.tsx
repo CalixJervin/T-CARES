@@ -3,15 +3,19 @@ import { CategoryChart } from "@/components/city/CategoryChart"
 import { AvgDaysByCategoryChart } from "@/components/transparency/AvgDaysByCategoryChart"
 import { OpenTicketsByBarangayRanked } from "@/components/transparency/OpenTicketsByBarangayRanked"
 import { useApp } from "@/context/AppContext"
+import { findRecurringClusters } from "@/lib/recurring"
 import { getDaysOpen } from "@/lib/storage"
 import { pluralize } from "@/lib/utils"
 import {
   AlertCircle,
   Calendar,
+  CheckCircle,
   CheckCircle2,
   Clock,
   Layers,
+  Repeat,
   ShieldCheck,
+  TriangleAlert,
 } from "lucide-react"
 
 export function TransparencyPage() {
@@ -40,6 +44,29 @@ export function TransparencyPage() {
       (t) => t.status !== "resolved" && getDaysOpen(t) > 7
     ).length
 
+    // Feature 1: Open hazard tickets count (resolved tickets excluded)
+    const openHazardCount = tickets.filter(
+      (t) => t.hazard && t.status !== "resolved"
+    ).length
+
+    // Feature 2: Recurring problem spots (number of clusters)
+    const clusters = findRecurringClusters(tickets)
+    const recurringSpotsCount = clusters.length
+
+    // Feature 3: Resident-confirmed resolution
+    // confirmed = at least one "fixed" and no "not fixed"
+    // b = currently resolved tickets
+    // c = tickets with reopenCount above 0
+    const currentlyResolvedCount = resolvedTicketsCount
+    const confirmedFixedCount = resolvedTickets.filter(
+      (t) =>
+        t.resolutionCheck?.responses?.some((r) => r.answer === "fixed") &&
+        !t.resolutionCheck?.responses?.some((r) => r.answer === "not_fixed")
+    ).length
+    const reopenedCount = tickets.filter(
+      (t) => (t.reopenCount || 0) > 0
+    ).length
+
     return {
       totalReportsReceived,
       totalTickets,
@@ -47,6 +74,11 @@ export function TransparencyPage() {
       resolvedPct,
       avgDays,
       openOver7Days,
+      openHazardCount,
+      recurringSpotsCount,
+      currentlyResolvedCount,
+      confirmedFixedCount,
+      reopenedCount,
     }
   }, [tickets])
 
@@ -168,6 +200,36 @@ export function TransparencyPage() {
           </div>
           <div className="mt-1 text-[11px] text-red-600/80 dark:text-red-400/80">
             {pluralize(metrics.openOver7Days, "overdue issue")} flagged
+          </div>
+        </div>
+      </section>
+
+      {/* THREE COMPACT AUDIT LINES */}
+      <section className="rounded-xl border border-border bg-card p-3.5 shadow-xs">
+        <div className="flex flex-col gap-2.5 md:flex-row md:items-center md:justify-between text-xs font-medium text-foreground">
+          <div className="flex items-center gap-2">
+            <TriangleAlert className="size-4 shrink-0 text-red-500" />
+            <span>
+              {metrics.openHazardCount} open hazard{" "}
+              {metrics.openHazardCount === 1 ? "ticket" : "tickets"}
+            </span>
+          </div>
+          <div className="hidden h-4 w-px bg-border md:block" />
+          <div className="flex items-center gap-2">
+            <Repeat className="size-4 shrink-0 text-amber-500" />
+            <span>
+              {metrics.recurringSpotsCount} recurring problem{" "}
+              {metrics.recurringSpotsCount === 1 ? "spot" : "spots"}
+            </span>
+          </div>
+          <div className="hidden h-4 w-px bg-border md:block" />
+          <div className="flex items-center gap-2">
+            <CheckCircle className="size-4 shrink-0 text-emerald-500" />
+            <span>
+              {metrics.confirmedFixedCount} of {metrics.currentlyResolvedCount}{" "}
+              resolved tickets confirmed fixed by residents,{" "}
+              {metrics.reopenedCount} reopened
+            </span>
           </div>
         </div>
       </section>

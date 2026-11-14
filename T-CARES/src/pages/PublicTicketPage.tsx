@@ -3,6 +3,7 @@ import { CategoryBadge } from "@/components/common/CategoryBadge"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { Button } from "@/components/ui/button"
 import { useApp } from "@/context/AppContext"
+import { RESIDENT_CHECK_REOPEN_PUBLIC } from "@/lib/constants"
 import { getDaysOpen } from "@/lib/storage"
 import {
   ArrowLeft,
@@ -11,6 +12,7 @@ import {
   Eye,
   MapPin,
   ShieldCheck,
+  TriangleAlert,
   Users,
 } from "lucide-react"
 
@@ -76,7 +78,13 @@ export function PublicTicketPage() {
               {ticket.id}
             </h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {ticket.hazard && (
+              <span className="flex items-center gap-1 rounded-full border border-red-500/30 bg-red-500/10 px-2.5 py-0.5 text-xs font-bold text-red-600 dark:text-red-400">
+                <TriangleAlert className="size-3.5" />
+                Hazard
+              </span>
+            )}
             <StatusBadge status={ticket.status} showTagalog />
           </div>
         </div>
@@ -167,7 +175,9 @@ export function PublicTicketPage() {
                   </div>
                   {h.note && (
                     <p className="mt-1 rounded-md border border-border/40 bg-muted/60 p-2 text-xs text-foreground">
-                      {h.note}
+                      {h.note.includes("residents reported it is not fixed")
+                        ? RESIDENT_CHECK_REOPEN_PUBLIC
+                        : h.note}
                     </p>
                   )}
                 </div>

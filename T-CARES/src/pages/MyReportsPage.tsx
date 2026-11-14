@@ -5,13 +5,23 @@ import { StatusBadge } from "@/components/common/StatusBadge"
 import { Button } from "@/components/ui/button"
 import { useApp } from "@/context/AppContext"
 import {
+  RESIDENT_CHECK_NO,
+  RESIDENT_CHECK_THANK_YOU,
+  RESIDENT_CHECK_TITLE,
+  RESIDENT_CHECK_YES,
+} from "@/lib/constants"
+import {
   getDaysOpen,
   getQueuedReports,
   markNotificationRead,
+  recordResidentResolutionResponse,
 } from "@/lib/storage"
 import type { QueuedReport, Ticket } from "@/lib/types"
 import {
+  AlertTriangle,
   Calendar,
+  CheckCircle,
+  CheckCircle2,
   ChevronDown,
   ChevronRight,
   Clock,
@@ -24,7 +34,7 @@ import {
 } from "lucide-react"
 
 export function MyReportsPage() {
-  const { tickets, reporterId, notifications, refreshData } = useApp()
+  const { tickets, reporterId, notifications, addToast, refreshData } = useApp()
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
 
   // Get offline queued reports
@@ -44,6 +54,39 @@ export function MyReportsPage() {
     const unread = notifications.filter((n) => !n.read)
     return new Set(unread.map((n) => n.ticketId))
   }, [notifications])
+
+  const handleResidentAnswer = (
+    ticketId: string,
+    answer: "fixed" | "not_fixed"
+  ) => {
+    try {
+      const { reopened } = recordResidentResolutionResponse(
+        ticketId,
+        reporterId,
+        answer
+      )
+      refreshData()
+      if (reopened) {
+        addToast({
+          title: `Ticket ${ticketId} Reopened`,
+          description: "Residents reported it is not fixed. Status set to In Progress.",
+          variant: "warning",
+        })
+      } else {
+        addToast({
+          title: "Salamat! / Thank you!",
+          description: RESIDENT_CHECK_THANK_YOU,
+          variant: "success",
+        })
+      }
+    } catch {
+      addToast({
+        title: "Tugon error",
+        description: "Hindi naitala ang iyong tugon. Subukan muli.",
+        variant: "destructive",
+      })
+    }
+  }
 
   const handleOpenTimeline = (ticket: Ticket) => {
     setSelectedTicketId((prev) => (prev === ticket.id ? null : ticket.id))
@@ -144,6 +187,11 @@ export function MyReportsPage() {
             const daysOpen = getDaysOpen(ticket)
             const isSelected = selectedTicketId === ticket.id
             const isOverdue = daysOpen > 7 && ticket.status !== "resolved"
+            const isResolved = ticket.status === "resolved"
+            const residentResponse = ticket.resolutionCheck?.responses?.find(
+              (r) => r.reporterId === reporterId
+            )
+            const hasAnswered = !!residentResponse
 
             return (
               <div
@@ -215,6 +263,64 @@ export function MyReportsPage() {
                     </span>
                   </div>
                 </button>
+
+                {/* Resident-Confirmed Resolution Prompt */}
+                {isResolved && !hasAnswered && (
+                  <div className="border-t border-border/80 bg-primary/5 p-3.5">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-foreground">
+                      <CheckCircle className="size-4 text-emerald-500" />
+                      <span>{RESIDENT_CHECK_TITLE}</span>
+                    </div>
+                    <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                      Pakikumpirma kung naayos na ba talaga ang iniulat na
+                      problema sa inyong lugar.
+                    </p>
+                    <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                      <Button
+                        size="sm"
+                        className="flex-1 cursor-pointer gap-1.5 bg-emerald-600 text-xs font-bold text-white shadow-xs hover:bg-emerald-700"
+                        onClick={() =>
+                          handleResidentAnswer(ticket.id, "fixed")
+                        }
+                      >
+                        <CheckCircle2 className="size-3.5" />
+                        {RESIDENT_CHECK_YES}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 cursor-pointer gap-1.5 border-destructive/40 text-xs font-bold text-destructive hover:bg-destructive/10"
+                        onClick={() =>
+                          handleResidentAnswer(ticket.id, "not_fixed")
+                        }
+                      >
+                        <AlertTriangle className="size-3.5" />
+                        {RESIDENT_CHECK_NO}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Response already given by this resident (allows changing until ticket status changes) */}
+                {isResolved && hasAnswered && residentResponse.answer === "fixed" && (
+                  <div className="border-t border-border/80 bg-emerald-500/10 p-2.5 px-3.5 text-xs">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">
+                        <CheckCircle2 className="size-3.5" />
+                        Nakumpirma mo na: Naayos na / Fixed
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleResidentAnswer(ticket.id, "not_fixed")
+                        }
+                        className="cursor-pointer text-[10px] font-medium text-muted-foreground underline transition-colors hover:text-destructive"
+                      >
+                        May problema pa rin? / Not fixed
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Expanded Status Timeline */}
                 {isSelected && (

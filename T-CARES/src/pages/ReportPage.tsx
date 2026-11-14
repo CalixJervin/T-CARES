@@ -11,6 +11,8 @@ import {
   CATEGORIES,
   DEFAULT_MAP_CENTER,
   EMERGENCY_NUMBER,
+  HAZARD_TOGGLE_HELPER,
+  HAZARD_TOGGLE_LABEL,
 } from "@/lib/constants"
 import { downscaleImage } from "@/lib/image"
 import { createSvgPlaceholder } from "@/lib/seed"
@@ -35,6 +37,7 @@ import {
   Phone,
   PlusCircle,
   Trash2,
+  TriangleAlert,
   Upload,
 } from "lucide-react"
 
@@ -45,6 +48,7 @@ export function ReportPage() {
   const [photo, setPhoto] = useState<string | undefined>(undefined)
   const [category, setCategory] = useState<Category | null>(null)
   const [categoryError, setCategoryError] = useState(false)
+  const [isHazard, setIsHazard] = useState(false)
   const [barangay, setBarangay] = useState<string>("Centro 1")
   const [lat, setLat] = useState<number>(DEFAULT_MAP_CENTER.lat)
   const [lng, setLng] = useState<number>(DEFAULT_MAP_CENTER.lng)
@@ -195,6 +199,7 @@ export function ReportPage() {
         contactType,
         contact: contact.trim(),
         reporterId,
+        hazard: isHazard,
       })
 
       setSubmittedTicket({
@@ -207,6 +212,9 @@ export function ReportPage() {
           status: "received",
           createdAt: new Date().toISOString(),
           followers: [reporterId],
+          hazard: isHazard,
+          reopenCount: 0,
+          resolutionCheck: { responses: [] },
           reports: [],
           history: [],
         },
@@ -253,6 +261,7 @@ export function ReportPage() {
           photo: finalPhoto,
           contactType,
           contact: contact.trim(),
+          hazard: isHazard,
         },
         reporterId
       )
@@ -296,6 +305,7 @@ export function ReportPage() {
           photo: finalPhoto,
           contactType,
           contact: contact.trim(),
+          hazard: isHazard,
         },
         reporterId
       )
@@ -321,6 +331,7 @@ export function ReportPage() {
     setPhoto(undefined)
     setCategory(null)
     setCategoryError(false)
+    setIsHazard(false)
     setDescription("")
     setLandmark("")
     setContact("")
@@ -486,21 +497,6 @@ export function ReportPage() {
           )}
         </section>
 
-        {/* EMERGENCY NOTICE */}
-        <div className="flex items-start gap-2.5 rounded-xl border border-blue-500/25 bg-blue-500/10 p-3 text-xs text-blue-950 dark:border-blue-400/20 dark:bg-blue-950/40 dark:text-blue-100">
-          <Info
-            className="mt-0.5 size-4 shrink-0 text-blue-600 dark:text-blue-400"
-            aria-hidden="true"
-          />
-          <p className="leading-relaxed">
-            Hindi ito para sa emergency. Para sa emergency, tumawag sa{" "}
-            <strong className="font-semibold text-foreground underline decoration-blue-500/40">
-              {EMERGENCY_NUMBER}
-            </strong>
-            .
-          </p>
-        </div>
-
         {/* 2. CATEGORY CHIPS */}
         <section
           ref={categorySectionRef}
@@ -593,6 +589,59 @@ export function ReportPage() {
                 </button>
               )
             })}
+          </div>
+        </section>
+
+        {/* HAZARD TOGGLE & EMERGENCY NOTICE */}
+        <section className="space-y-2">
+          <div className="rounded-xl border border-red-500/30 bg-card p-3.5 shadow-xs">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-start gap-2.5">
+                <TriangleAlert className="mt-0.5 size-4 shrink-0 text-red-500" />
+                <div>
+                  <label
+                    htmlFor="hazard-toggle"
+                    className="cursor-pointer text-xs font-bold text-foreground"
+                  >
+                    {HAZARD_TOGGLE_LABEL}
+                  </label>
+                  <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
+                    {HAZARD_TOGGLE_HELPER}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                id="hazard-toggle"
+                role="switch"
+                aria-checked={isHazard}
+                onClick={() => setIsHazard(!isHazard)}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:outline-none ${
+                  isHazard ? "bg-red-500" : "bg-muted"
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block size-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                    isHazard ? "translate-x-5" : "translate-x-0"
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+
+          {/* EMERGENCY NOTICE (near hazard toggle) */}
+          <div className="flex items-start gap-2.5 rounded-xl border border-blue-500/25 bg-blue-500/10 p-3 text-xs text-blue-950 dark:border-blue-400/20 dark:bg-blue-950/40 dark:text-blue-100">
+            <Info
+              className="mt-0.5 size-4 shrink-0 text-blue-600 dark:text-blue-400"
+              aria-hidden="true"
+            />
+            <p className="leading-relaxed">
+              Hindi ito para sa emergency. Para sa emergency, tumawag sa{" "}
+              <strong className="font-semibold text-foreground underline decoration-blue-500/40">
+                {EMERGENCY_NUMBER}
+              </strong>
+              .
+            </p>
           </div>
         </section>
 

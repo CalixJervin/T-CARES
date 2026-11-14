@@ -21,12 +21,23 @@ export interface Report {
   contact: string
   reporterId: string // anonymous local id
   synced: boolean
+  hazard?: boolean
 }
 
 export interface TicketHistory {
   status: Status
   note?: string
   at: string // ISO string
+}
+
+export interface ResolutionResponse {
+  reporterId: string
+  answer: "fixed" | "not_fixed"
+  at: string // ISO string
+}
+
+export interface ResolutionCheck {
+  responses: ResolutionResponse[]
 }
 
 export interface Ticket {
@@ -42,6 +53,10 @@ export interface Ticket {
   reports: Report[]
   followers: string[] // reporterIds
   history: TicketHistory[]
+  hazard: boolean
+  reopenCount: number
+  resolutionCheck: ResolutionCheck
+  previousResolutionChecks?: ResolutionCheck[]
 }
 
 export interface QueuedReport {
@@ -60,6 +75,7 @@ export interface QueuedReport {
   createdAt: string
   isDuplicateFollow?: boolean
   targetTicketId?: string
+  hazard?: boolean
 }
 
 export interface NotificationItem {

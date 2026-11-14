@@ -3,9 +3,15 @@ import { MapContainer, Marker, TileLayer, useMap } from "react-leaflet"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { Button } from "@/components/ui/button"
 import { useApp } from "@/context/AppContext"
-import { DEPARTMENTS } from "@/lib/constants"
+import { DEPARTMENTS, getRecurringDrawerText, RESIDENT_CHECK_DRAWER_HINT } from "@/lib/constants"
 import { createLocationPinIcon } from "@/lib/map-icons"
-import { deleteTicket, getDaysOpen, updateTicketStaff } from "@/lib/storage"
+import { findRecurringClusters, getTicketRecurringCluster } from "@/lib/recurring"
+import {
+  deleteTicket,
+  getDaysOpen,
+  toggleTicketHazard,
+  updateTicketStaff,
+} from "@/lib/storage"
 import type { Status, Ticket } from "@/lib/types"
 import {
   Building2,
@@ -15,8 +21,10 @@ import {
   MapPin,
   MessageSquare,
   Phone,
+  Repeat,
   Save,
   Trash2,
+  TriangleAlert,
   Users,
   X,
 } from "lucide-react"
@@ -24,6 +32,7 @@ import {
 interface TicketDetailDrawerProps {
   ticket: Ticket
   onClose: () => void
+  onSelectTicket?: (ticket: Ticket) => void
 }
 
 function DrawerMapUpdater({ lat, lng }: { lat: number; lng: number }) {
@@ -41,8 +50,9 @@ function DrawerMapUpdater({ lat, lng }: { lat: number; lng: number }) {
 export function TicketDetailDrawer({
   ticket,
   onClose,
+  onSelectTicket,
 }: TicketDetailDrawerProps) {
-  const { addToast, refreshData } = useApp()
+  const { tickets, addToast, refreshData } = useApp()
   const [status, setStatus] = useState<Status>(ticket.status)
   const [department, setDepartment] = useState<string>(ticket.department || "")
   const [note, setNote] = useState<string>("")
@@ -52,6 +62,44 @@ export function TicketDetailDrawer({
   const pinIcon = useMemo(() => createLocationPinIcon(), [])
   const daysOpen = getDaysOpen(ticket)
   const isOverdue = daysOpen > 7 && ticket.status !== "resolved"
+
+  // Recurring spot info for this ticket
+  const recurringClusters = useMemo(
+    () => findRecurringClusters(tickets),
+    [tickets]
+  )
+  const recurringInfo = useMemo(
+    () => getTicketRecurringCluster(ticket.id, recurringClusters),
+    [ticket.id, recurringClusters]
+  )
+
+  // Resident check counts
+  const fixedCount =
+    ticket.resolutionCheck?.responses?.filter((r) => r.answer === "fixed")
+      .length || 0
+  const notFixedCount =
+    ticket.resolutionCheck?.responses?.filter((r) => r.answer === "not_fixed")
+      .length || 0
+
+  const handleToggleHazard = () => {
+    try {
+      const updated = toggleTicketHazard(ticket.id)
+      refreshData()
+      addToast({
+        title: updated.hazard ? "Marked as Hazard" : "Hazard Cleared",
+        description: updated.hazard
+          ? "Ticket flagged as urgent hazard."
+          : "Hazard status cleared.",
+        variant: updated.hazard ? "destructive" : "default",
+      })
+    } catch {
+      addToast({
+        title: "Toggle failed",
+        description: "Could not update hazard status.",
+        variant: "destructive",
+      })
+    }
+  }
 
   const handleDelete = () => {
     deleteTicket(ticket.id)
@@ -102,11 +150,23 @@ export function TicketDetailDrawer({
         {/* Drawer Header */}
         <div className="flex items-center justify-between border-b border-border bg-muted/40 p-4">
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="font-mono text-base font-extrabold text-primary">
                 {ticket.id}
               </span>
               <StatusBadge status={ticket.status} />
+              {ticket.hazard && (
+                <span className="inline-flex items-center gap-1 rounded border border-red-500/30 bg-red-500/10 px-2 py-0.5 text-[10px] font-bold text-red-600 dark:text-red-400">
+                  <TriangleAlert className="size-3" />
+                  Hazard
+                </span>
+              )}
+              {recurringInfo && (
+                <span className="inline-flex items-center gap-1 rounded border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                  <Repeat className="size-3" />
+                  Recurring spot
+                </span>
+              )}
               {isOverdue && (
                 <span className="rounded border border-red-500/20 bg-red-500/10 px-2 py-0.5 text-[10px] font-bold text-red-500">
                   Overdue (&gt;7d)
@@ -139,7 +199,7 @@ export function TicketDetailDrawer({
             <div className="flex items-center gap-2 text-primary">
               <Layers className="size-4" />
               <span className="text-xs font-bold tracking-wider uppercase">
-                One Master Ticket — Merged Civic Reports
+                Merged Civic Reports
               </span>
             </div>
             <div className="mt-2 flex items-baseline gap-2">
@@ -151,10 +211,95 @@ export function TicketDetailDrawer({
                 here
               </span>
             </div>
-            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-              Instead of generating separate duplicate tickets for each citizen,
-              CityAction clusters nearby reports into this single master ticket.
-              All {ticket.followers.length} citizen followers receive updates.
+          </div>
+
+          {/* Recurring Spot Card (if applicable) */}
+          {recurringInfo && (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 shadow-xs">
+              <div className="flex items-center gap-1.5 text-xs font-bold tracking-wider text-amber-600 uppercase dark:text-amber-400">
+                <Repeat className="size-3.5" />
+                <span>Recurring Spot</span>
+              </div>
+              <p className="mt-1 text-xs font-medium text-foreground">
+                {getRecurringDrawerText(recurringInfo.cluster.count)}
+              </p>
+              {recurringInfo.siblingIds.length > 0 && (
+                <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-xs">
+                  <span className="text-[11px] text-muted-foreground">
+                    Sibling tickets:
+                  </span>
+                  {recurringInfo.siblingIds.map((siblingId) => {
+                    const siblingTicket = tickets.find((t) => t.id === siblingId)
+                    return (
+                      <button
+                        key={siblingId}
+                        type="button"
+                        onClick={() => {
+                          if (siblingTicket && onSelectTicket) {
+                            onSelectTicket(siblingTicket)
+                          }
+                        }}
+                        className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-amber-500/30 bg-card px-2 py-0.5 font-mono text-[11px] font-bold text-amber-600 hover:bg-muted dark:text-amber-400"
+                      >
+                        <span>{siblingId}</span>
+                        <ExternalLink className="size-2.5" />
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Hazard Toggle Control */}
+          <div className="flex items-center justify-between rounded-xl border border-border bg-card p-3 shadow-xs">
+            <div className="flex items-center gap-2">
+              <div
+                className={`flex size-8 items-center justify-center rounded-lg ${
+                  ticket.hazard
+                    ? "bg-red-500/10 text-red-600 dark:text-red-400"
+                    : "bg-muted text-muted-foreground"
+                }`}
+              >
+                <TriangleAlert className="size-4" />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-foreground">
+                  {ticket.hazard ? "Hazard Priority Active" : "Standard Priority"}
+                </div>
+                <div className="text-[10px] text-muted-foreground">
+                  {ticket.hazard
+                    ? "Marked as urgent, dangerous issue"
+                    : "Not flagged as hazard"}
+                </div>
+              </div>
+            </div>
+            <Button
+              type="button"
+              size="xs"
+              variant={ticket.hazard ? "destructive" : "outline"}
+              onClick={handleToggleHazard}
+              className="h-7 cursor-pointer text-xs font-semibold"
+            >
+              {ticket.hazard ? "Clear Hazard" : "Mark as Hazard"}
+            </Button>
+          </div>
+
+          {/* Resident Check Section */}
+          <div className="rounded-xl border border-border bg-card p-3.5 shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold tracking-wider text-foreground uppercase">
+                Resident Check
+              </span>
+              {(ticket.reopenCount || 0) > 0 && (
+                <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                  Reopen count: {ticket.reopenCount}
+                </span>
+              )}
+            </div>
+            <p className="mt-1 text-xs font-medium text-foreground">
+              Resident check: {fixedCount} fixed, {notFixedCount} not fixed of{" "}
+              {ticket.followers.length} followers
             </p>
           </div>
 
@@ -252,7 +397,10 @@ export function TicketDetailDrawer({
 
             <div>
               <label className="mb-1 block text-[11px] font-semibold text-foreground">
-                Resolution Note / Action Log (Dispatched to followers)
+                Resolution Note / Action Log (Dispatched to followers){" "}
+                <span className="text-[10px] font-normal text-muted-foreground italic">
+                  ({RESIDENT_CHECK_DRAWER_HINT})
+                </span>
               </label>
               <input
                 type="text"

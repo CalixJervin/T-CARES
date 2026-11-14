@@ -93,7 +93,7 @@ export function HotspotMap({
         />
 
         {tickets.map((t) => {
-          const icon = createTicketMarkerIcon(t.status, t.reports.length)
+          const icon = createTicketMarkerIcon(t.status, t.reports.length, t.hazard)
           const days = getDaysOpen(t)
           const isOverdue = days > 7 && t.status !== "resolved"
 

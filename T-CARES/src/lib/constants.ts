@@ -190,3 +190,80 @@ export const STATUS_META: Record<Status, StatusMeta> = {
     markerColor: "#10b981", // green
   },
 }
+
+// ========================================================
+// FEATURE 1: Hazard Flag Constants & Labels
+// ========================================================
+
+// Citizen intake toggle label (Tagalog first, English second)
+export const HAZARD_TOGGLE_LABEL = "Delikado ngayon / Hazard now"
+
+// Citizen intake helper text explaining what counts as a hazard
+export const HAZARD_TOGGLE_HELPER =
+  "Mapanganib ngayon, hal. baha, nakabuwal na poste, bukas na manhole."
+
+// Badge label shown in staff register table, drawer, and public ticket page
+export const HAZARD_BADGE_LABEL = "Delikado / Hazard"
+
+// Filter chip label in staff ticket register
+export const HAZARD_FILTER_LABEL = "Delikado Lamang / Hazard only"
+
+// Staff history audit log notes on hazard status toggle
+export const HAZARD_HISTORY_MARKED = "Marked as hazard"
+export const HAZARD_HISTORY_CLEARED = "Hazard cleared"
+
+// ========================================================
+// FEATURE 2: Recurring-Spot Constants & Labels
+// ========================================================
+
+// Search radius in meters to cluster recurring tickets of the same category
+export const RECURRING_RADIUS_M = 100
+
+// Time window in days to consider tickets part of the same recurring issue
+export const RECURRING_WINDOW_DAYS = 90
+
+// Minimum tickets in cluster to be flagged as recurring (use 3 for real data; 2 is for the small demo set)
+export const RECURRING_MIN_TICKETS = 2
+
+// Badge label for recurring spots in staff table and drawer (Tagalog first, English second)
+export const RECURRING_BADGE_LABEL = "Paulit-ulit na Lugar / Recurring spot"
+
+// KPI card label on staff dashboard
+export const RECURRING_KPI_LABEL = "Recurring spots"
+
+// Helper text for recurring ticket sibling explanation in drawer
+export const getRecurringDrawerText = (count: number) =>
+  `${count} tickets of this type within 100 m in the last 90 days`
+
+// ========================================================
+// FEATURE 3: Resident-Confirmed Resolution Constants & Labels
+// ========================================================
+
+// Number of "not fixed" answers needed to reopen a resolved ticket
+export const REOPEN_ON_NOT_FIXED = 1
+
+// Resident confirmation prompt title on /my (Tagalog first, English second)
+export const RESIDENT_CHECK_TITLE = "Naayos na ba? / Was it fixed?"
+
+// Resident confirmation prompt button: confirmed fixed (Tagalog first, English second)
+export const RESIDENT_CHECK_YES = "Oo, naayos na / Yes, fixed"
+
+// Resident confirmation prompt button: still broken (Tagalog first, English second)
+export const RESIDENT_CHECK_NO =
+  "Hindi pa, may problema pa rin / Not yet, still a problem"
+
+// History log entry when ticket is reopened by residents
+export const RESIDENT_CHECK_REOPEN_HISTORY =
+  "Reopened: residents reported it is not fixed"
+
+// Public timeline display note when reopened by residents (no personal data)
+export const RESIDENT_CHECK_REOPEN_PUBLIC =
+  "Reopened after residents reported it was not fixed"
+
+// Staff drawer note field hint ensuring staff know comments are public to followers
+export const RESIDENT_CHECK_DRAWER_HINT = "Visible to residents"
+
+// Thank you toast when resident confirms ticket is fixed
+export const RESIDENT_CHECK_THANK_YOU =
+  "Salamat sa pagsusuri! / Thank you for confirming."
+

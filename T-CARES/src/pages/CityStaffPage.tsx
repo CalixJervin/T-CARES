@@ -8,9 +8,11 @@ import { HotspotMap } from "@/components/city/HotspotMap"
 import { TicketDetailDrawer } from "@/components/city/TicketDetailDrawer"
 import { Button } from "@/components/ui/button"
 import { useApp } from "@/context/AppContext"
-import { CATEGORIES, DEPARTMENTS } from "@/lib/constants"
+import { CATEGORIES, DEPARTMENTS, RECURRING_KPI_LABEL } from "@/lib/constants"
+import { findRecurringClusters } from "@/lib/recurring"
 import { deleteTicket, getDaysOpen } from "@/lib/storage"
 import type { Category, Ticket } from "@/lib/types"
+import { pluralize } from "@/lib/utils"
 import {
   AlertCircle,
   ArrowLeft,
@@ -20,10 +22,12 @@ import {
   Clock,
   Layers,
   MapPin,
+  Repeat,
   Search,
   ShieldCheck,
   Trash2,
   TrendingUp,
+  TriangleAlert,
 } from "lucide-react"
 
 export function CityStaffPage() {
@@ -43,9 +47,25 @@ export function CityStaffPage() {
   // Filtering & Sorting
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [categoryFilter, setCategoryFilter] = useState<string>("all")
+  const [hazardOnly, setHazardOnly] = useState<boolean>(false)
   const [searchQuery, setSearchQuery] = useState<string>("")
-  const [sortBy, setSortBy] = useState<"reports" | "days" | "id">("reports")
+  const [sortBy, setSortBy] = useState<"default" | "reports" | "days" | "id">("default")
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc")
+
+  // Recurring clusters
+  const recurringClusters = useMemo(
+    () => findRecurringClusters(tickets),
+    [tickets]
+  )
+  const recurringTicketIds = useMemo(() => {
+    const set = new Set<string>()
+    for (const c of recurringClusters) {
+      for (const id of c.ticketIds) {
+        set.add(id)
+      }
+    }
+    return set
+  }, [recurringClusters])
 
   // KPIs
   const kpis = useMemo(() => {
@@ -66,6 +86,7 @@ export function CityStaffPage() {
     ).length
 
     const totalReports = tickets.reduce((acc, t) => acc + t.reports.length, 0)
+    const recurringSpots = recurringClusters.length
 
     return {
       total,
@@ -75,13 +96,15 @@ export function CityStaffPage() {
       avgDays,
       overdueCount,
       totalReports,
+      recurringSpots,
     }
-  }, [tickets])
+  }, [tickets, recurringClusters])
 
   // Filtered & Sorted Tickets
   const filteredTickets = useMemo(() => {
     return tickets
       .filter((t) => {
+        if (hazardOnly && !t.hazard) return false
         if (statusFilter !== "all" && t.status !== statusFilter) return false
         if (categoryFilter !== "all" && t.category !== categoryFilter)
           return false
@@ -98,6 +121,19 @@ export function CityStaffPage() {
         return true
       })
       .sort((a, b) => {
+        if (sortBy === "default") {
+          // Hazard tickets first, then report count (desc), then days open (desc)
+          const hazardA = a.hazard ? 1 : 0
+          const hazardB = b.hazard ? 1 : 0
+          if (hazardB !== hazardA) {
+            return hazardB - hazardA
+          }
+          const reportsDiff = b.reports.length - a.reports.length
+          if (reportsDiff !== 0) {
+            return reportsDiff
+          }
+          return getDaysOpen(b) - getDaysOpen(a)
+        }
         if (sortBy === "reports") {
           return sortOrder === "desc"
             ? b.reports.length - a.reports.length
@@ -112,7 +148,7 @@ export function CityStaffPage() {
           ? b.id.localeCompare(a.id)
           : a.id.localeCompare(b.id)
       })
-  }, [tickets, statusFilter, categoryFilter, searchQuery, sortBy, sortOrder])
+  }, [tickets, hazardOnly, statusFilter, categoryFilter, searchQuery, sortBy, sortOrder])
 
   const toggleSort = (col: "reports" | "days" | "id") => {
     if (sortBy === col) {
@@ -229,7 +265,7 @@ export function CityStaffPage() {
       </div>
 
       {/* KPI ROW */}
-      <section className="grid grid-cols-2 gap-3 md:grid-cols-5">
+      <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {/* Total Tickets */}
         <div className="rounded-xl border border-border bg-card p-3.5 shadow-xs">
           <div className="flex items-center justify-between text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
@@ -289,8 +325,22 @@ export function CityStaffPage() {
           </div>
         </div>
 
+        {/* Recurring Spots KPI */}
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3.5 shadow-xs">
+          <div className="flex items-center justify-between text-[10px] font-bold tracking-wider text-amber-600 uppercase dark:text-amber-400">
+            <span>{RECURRING_KPI_LABEL}</span>
+            <Repeat className="size-3.5 text-amber-500" />
+          </div>
+          <div className="mt-1 text-2xl font-black text-amber-600 dark:text-amber-400">
+            {kpis.recurringSpots}
+          </div>
+          <div className="mt-1 text-[11px] text-muted-foreground">
+            {pluralize(kpis.recurringSpots, "problem spot")} detected
+          </div>
+        </div>
+
         {/* Overdue (>7 days) */}
-        <div className="col-span-2 rounded-xl border border-red-500/30 bg-red-500/5 p-3.5 shadow-xs md:col-span-1">
+        <div className="col-span-2 rounded-xl border border-red-500/30 bg-red-500/5 p-3.5 shadow-xs sm:col-span-1 lg:col-span-1">
           <div className="flex items-center justify-between text-[10px] font-bold tracking-wider text-red-600 uppercase dark:text-red-400">
             <span>Open &gt; 7 Days</span>
             <AlertCircle className="size-3.5 text-red-500" />
@@ -408,6 +458,20 @@ export function CityStaffPage() {
                 </option>
               ))}
             </select>
+
+            {/* Hazard Only Filter Chip */}
+            <button
+              type="button"
+              onClick={() => setHazardOnly((prev) => !prev)}
+              className={`flex cursor-pointer items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-colors ${
+                hazardOnly
+                  ? "border-red-500 bg-red-500/15 text-red-600 dark:text-red-400"
+                  : "border-border bg-background text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <TriangleAlert className="size-3 text-red-500" />
+              <span>Hazard only</span>
+            </button>
           </div>
         </div>
 
@@ -465,15 +529,32 @@ export function CityStaffPage() {
                 filteredTickets.map((t) => {
                   const days = getDaysOpen(t)
                   const isOverdue = days > 7 && t.status !== "resolved"
+                  const isRecurring = recurringTicketIds.has(t.id)
 
                   return (
                     <tr
                       key={t.id}
                       onClick={() => setSelectedTicket(t)}
-                      className="cursor-pointer transition-colors hover:bg-muted/40"
+                      className={`cursor-pointer transition-colors hover:bg-muted/40 ${
+                        t.hazard ? "border-l-4 border-l-red-500" : ""
+                      }`}
                     >
                       <td className="px-3 py-3 font-mono font-bold text-primary">
-                        {t.id}
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span>{t.id}</span>
+                          {t.hazard && (
+                            <span className="inline-flex items-center gap-0.5 rounded border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-bold text-red-600 dark:text-red-400">
+                              <TriangleAlert className="size-2.5 shrink-0" />
+                              Hazard
+                            </span>
+                          )}
+                          {isRecurring && (
+                            <span className="inline-flex items-center gap-0.5 rounded border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                              <Repeat className="size-2.5 shrink-0" />
+                              Recurring
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-3 py-3">
                         <CategoryBadge category={t.category} variant="short" />
@@ -548,6 +629,7 @@ export function CityStaffPage() {
         <TicketDetailDrawer
           ticket={currentSelectedTicket}
           onClose={() => setSelectedTicket(null)}
+          onSelectTicket={(sibling) => setSelectedTicket(sibling)}
         />
       )}
     </main>
