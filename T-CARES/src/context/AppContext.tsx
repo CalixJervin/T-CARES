@@ -3,6 +3,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react"
 import {
@@ -55,6 +56,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     getNotifications()
   )
   const [toasts, setToasts] = useState<ToastMessage[]>([])
+  const seenNotificationIdsRef = useRef<Set<string>>(
+    new Set(getNotifications().map((n) => n.id))
+  )
   const [isStaffAuthenticated, setIsStaffAuthenticated] = useState<boolean>(
     () => {
       try {
@@ -175,27 +179,42 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const handleStorageChange = () => {
       refreshData()
-      // If notifications were added and user is a follower
-      const curNotifications = getNotifications()
-      const userTickets = getTickets().filter(
-        (t) =>
-          t.followers.includes(reporterId) ||
-          t.reports.some((r) => r.reporterId === reporterId)
-      )
-      const userTicketIds = new Set(userTickets.map((t) => t.id))
+      // If user is currently on staff portal, staff confirmation toast is already shown by Drawer
+      const isStaffRoute =
+        typeof window !== "undefined" &&
+        (window.location.pathname.startsWith("/staff") ||
+          window.location.pathname.startsWith("/city"))
 
+      const curNotifications = getNotifications()
       const latest = curNotifications[0]
+
       if (
         latest &&
         !latest.read &&
-        userTicketIds.has(latest.ticketId) &&
-        Date.now() - new Date(latest.timestamp).getTime() < 3000
+        !seenNotificationIdsRef.current.has(latest.id)
       ) {
-        addToast({
-          title: `Ticket ${latest.ticketId} Updated`,
-          description: `Status changed to "${latest.newStatus}". ${latest.note ? `Note: "${latest.note}"` : ""}`,
-          variant: "success",
-        })
+        seenNotificationIdsRef.current.add(latest.id)
+
+        // Only show follower alert toast if citizen is not currently acting as staff
+        if (!isStaffRoute) {
+          const userTickets = getTickets().filter(
+            (t) =>
+              t.followers.includes(reporterId) ||
+              t.reports.some((r) => r.reporterId === reporterId)
+          )
+          const userTicketIds = new Set(userTickets.map((t) => t.id))
+
+          if (
+            userTicketIds.has(latest.ticketId) &&
+            Date.now() - new Date(latest.timestamp).getTime() < 3000
+          ) {
+            addToast({
+              title: `Ticket ${latest.ticketId} Updated`,
+              description: `Status changed to "${latest.newStatus}". ${latest.note ? `Note: "${latest.note}"` : ""}`,
+              variant: "success",
+            })
+          }
+        }
       }
     }
 

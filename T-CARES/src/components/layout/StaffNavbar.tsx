@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom"
 import { useTheme } from "@/components/theme-provider"
-import { Building2, Moon, Sun } from "lucide-react"
+import { Moon, Sun } from "lucide-react"
 
 export function StaffNavbar() {
   const { theme, setTheme } = useTheme()

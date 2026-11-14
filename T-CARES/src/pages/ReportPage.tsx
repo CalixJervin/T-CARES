@@ -10,7 +10,6 @@ import {
   BARANGAY_COORDINATES,
   CATEGORIES,
   DEFAULT_MAP_CENTER,
-  EMERGENCY_NUMBER,
   HAZARD_TOGGLE_HELPER,
   HAZARD_TOGGLE_LABEL,
 } from "@/lib/constants"
@@ -30,7 +29,6 @@ import {
   CheckCircle2,
   ExternalLink,
   FileText,
-  Info,
   LocateFixed,
   MapPin,
   MessageSquare,
@@ -629,20 +627,7 @@ export function ReportPage() {
             </div>
           </div>
 
-          {/* EMERGENCY NOTICE (near hazard toggle) */}
-          <div className="flex items-start gap-2.5 rounded-xl border border-blue-500/25 bg-blue-500/10 p-3 text-xs text-blue-950 dark:border-blue-400/20 dark:bg-blue-950/40 dark:text-blue-100">
-            <Info
-              className="mt-0.5 size-4 shrink-0 text-blue-600 dark:text-blue-400"
-              aria-hidden="true"
-            />
-            <p className="leading-relaxed">
-              Hindi ito para sa emergency. Para sa emergency, tumawag sa{" "}
-              <strong className="font-semibold text-foreground underline decoration-blue-500/40">
-                {EMERGENCY_NUMBER}
-              </strong>
-              .
-            </p>
-          </div>
+          
         </section>
 
         {/* 3. LOCATION & BARANGAY */}
@@ -815,6 +800,8 @@ export function ReportPage() {
             </span>
           </label>
         </section>
+
+        
 
         {/* SUBMIT BUTTON */}
         <Button

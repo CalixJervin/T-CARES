@@ -26,9 +26,11 @@ export function Navbar() {
             to="/user/report"
             className="group flex items-center gap-2 font-semibold tracking-tight text-foreground"
           >
-            <div className="flex size-7 items-center justify-center rounded-lg bg-primary font-bold text-primary-foreground shadow-xs">
-              CA
-            </div>
+            <img
+  src="/Logo.png"
+  alt="CityAction logo"
+  className="size-7 rounded-lg object-cover shadow-xs"
+/>
             <div className="flex flex-col leading-none">
               <div className="flex items-center gap-1.5 text-sm font-bold">
                 CityAction

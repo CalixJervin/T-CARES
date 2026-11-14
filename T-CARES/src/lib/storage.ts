@@ -340,15 +340,18 @@ export function updateTicketStaff(
 
   // Record notification for followers
   if (statusChanged) {
-    recordNotification({
-      id: "notif_" + Math.random().toString(36).substring(2, 9),
-      ticketId: ticket.id,
-      oldStatus,
-      newStatus: ticket.status,
-      note: updates.note,
-      timestamp: now,
-      read: false,
-    })
+    recordNotification(
+      {
+        id: "notif_" + Math.random().toString(36).substring(2, 9),
+        ticketId: ticket.id,
+        oldStatus,
+        newStatus: ticket.status,
+        note: updates.note,
+        timestamp: now,
+        read: false,
+      },
+      false
+    )
   }
 
   tickets[ticketIndex] = ticket
@@ -416,15 +419,18 @@ export function recordResidentResolutionResponse(
       at: now,
     })
 
-    recordNotification({
-      id: "notif_" + Math.random().toString(36).substring(2, 9),
-      ticketId: ticket.id,
-      oldStatus,
-      newStatus: "in_progress",
-      note: RESIDENT_CHECK_REOPEN_HISTORY,
-      timestamp: now,
-      read: false,
-    })
+    recordNotification(
+      {
+        id: "notif_" + Math.random().toString(36).substring(2, 9),
+        ticketId: ticket.id,
+        oldStatus,
+        newStatus: "in_progress",
+        note: RESIDENT_CHECK_REOPEN_HISTORY,
+        timestamp: now,
+        read: false,
+      },
+      false
+    )
     reopened = true
   }
 
@@ -458,12 +464,17 @@ export function getNotifications(): NotificationItem[] {
   }
 }
 
-export function recordNotification(item: NotificationItem): void {
+export function recordNotification(
+  item: NotificationItem,
+  notify = true
+): void {
   try {
     const list = getNotifications()
     list.unshift(item)
     localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(list))
-    notifyDataChange()
+    if (notify) {
+      notifyDataChange()
+    }
   } catch (err) {
     console.error("Failed to record notification:", err)
   }
