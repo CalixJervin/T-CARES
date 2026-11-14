@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom"
 import { useTheme } from "@/components/theme-provider"
-import { ArrowLeft, Building2, Moon, Sun } from "lucide-react"
+import { Building2, Moon, Sun } from "lucide-react"
 
 export function StaffNavbar() {
   const { theme, setTheme } = useTheme()
@@ -19,7 +19,11 @@ export function StaffNavbar() {
             className="group flex items-center gap-2 font-semibold tracking-tight text-foreground"
           >
             <div className="flex size-7 items-center justify-center rounded-lg bg-amber-600 font-bold text-white shadow-xs">
-              <Building2 className="size-4" />
+              <img
+  src="/Logo.png"
+  alt="CityAction logo"
+  className="size-7 rounded-lg object-cover shadow-xs"
+/>
             </div>
             <div className="flex flex-col leading-none">
               <div className="flex items-center gap-1.5 text-sm font-bold">
@@ -35,16 +39,6 @@ export function StaffNavbar() {
 
         {/* Right side controls */}
         <div className="flex items-center gap-1.5 sm:gap-2">
-          {/* Switch to Citizen Portal */}
-          <Link
-            to="/user/report"
-            className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted"
-          >
-            <ArrowLeft className="size-3.5 text-primary" />
-            <span className="hidden sm:inline">Citizen Portal</span>
-            <span className="sm:hidden">Citizen View</span>
-          </Link>
-
           {/* Theme Toggle */}
           <button
             onClick={toggleTheme}

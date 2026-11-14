@@ -3,7 +3,6 @@ import { useTheme } from "@/components/theme-provider"
 import { useApp } from "@/context/AppContext"
 import {
   BarChart3,
-  Building2,
   FileText,
   Moon,
   PlusCircle,
@@ -20,7 +19,7 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-card/85 backdrop-blur-md">
-      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-3 sm:px-6">
+      <div className="relative mx-auto flex h-14 max-w-7xl items-center justify-between px-3 sm:px-6">
         {/* Brand */}
         <div className="flex items-center gap-3">
           <Link
@@ -41,8 +40,8 @@ export function Navbar() {
           </Link>
         </div>
 
-        {/* Navigation Switcher (Users Only) */}
-        <nav className="flex items-center gap-1 sm:gap-2">
+        {/* Navigation Switcher (Users Only) - Centered with the app column */}
+        <nav className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1 sm:gap-2">
           {/* Citizen: Report */}
           <NavLink
             to="/user/report"
@@ -101,19 +100,8 @@ export function Navbar() {
           </NavLink>
         </nav>
 
-        {/* Action Controls: Staff Portal Switcher + Demo Controls */}
+        {/* Action Controls: Theme Toggle */}
         <div className="flex items-center gap-1.5 sm:gap-2">
-          {/* Separate City Staff Route Switcher */}
-          <Link
-            to="/staff"
-            title="Switch to City Staff Portal"
-            className="flex items-center gap-1.5 rounded-lg border border-border bg-muted/70 px-2.5 py-1 text-xs font-semibold text-foreground transition-colors hover:bg-muted hover:text-primary"
-          >
-            <Building2 className="size-3.5 text-primary" />
-            <span className="hidden sm:inline">City Staff</span>
-            <span className="sm:hidden">Staff</span>
-          </Link>
-
           <button
             onClick={toggleTheme}
             aria-label="Toggle dark mode"

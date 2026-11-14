@@ -213,12 +213,7 @@ export function MyReportsPage() {
                       <span className="font-mono text-xs font-bold text-primary">
                         {ticket.id}
                       </span>
-                      {isUpdated && (
-                        <span className="flex animate-pulse items-center gap-1 rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-xs">
-                          <Sparkles className="size-2.5" />
-                          Updated
-                        </span>
-                      )}
+                      
                     </div>
                     <div className="flex items-center gap-1.5">
                       <StatusBadge status={ticket.status} />

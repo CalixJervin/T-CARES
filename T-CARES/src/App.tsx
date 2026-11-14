@@ -1,8 +1,11 @@
+import { useEffect } from "react"
 import {
   BrowserRouter,
   Navigate,
   Route,
   Routes,
+  useLocation,
+  useNavigate,
   useParams,
 } from "react-router-dom"
 import { ToastContainer } from "@/components/common/ToastContainer"
@@ -21,11 +24,53 @@ function LegacyTicketRedirect() {
   return <Navigate to={`/user/t/${id}`} replace />
 }
 
+function PortalKeyboardSwitcher() {
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger if user is focused inside an input, textarea, select, or contenteditable element
+      const target = e.target as HTMLElement | null
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable)
+      ) {
+        return
+      }
+
+      if (e.key === "q" || e.key === "Q") {
+        if (e.ctrlKey || e.altKey || e.metaKey) return
+        e.preventDefault()
+
+        const isStaff =
+          location.pathname.startsWith("/staff") ||
+          location.pathname.startsWith("/city")
+
+        if (isStaff) {
+          navigate("/user/report")
+        } else {
+          navigate("/staff")
+        }
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [navigate, location.pathname])
+
+  return null
+}
+
 export function App() {
   return (
     <AppProvider>
       <BrowserRouter>
         <div className="flex min-h-screen flex-col bg-background font-sans text-foreground">
+          <PortalKeyboardSwitcher />
           <OfflineBanner />
           <Routes>
             {/* User Routes (Available for Citizens/Users Only) */}
