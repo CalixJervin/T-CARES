@@ -154,13 +154,7 @@ export function TicketDetailDrawer({
               <span className="font-mono text-base font-extrabold text-primary">
                 {ticket.id}
               </span>
-              <StatusBadge status={ticket.status} />
-              {ticket.hazard && (
-                <span className="inline-flex items-center gap-1 rounded border border-red-500/30 bg-red-500/10 px-2 py-0.5 text-[10px] font-bold text-red-600 dark:text-red-400">
-                  <TriangleAlert className="size-3" />
-                  Hazard
-                </span>
-              )}
+              
               {recurringInfo && (
                 <span className="inline-flex items-center gap-1 rounded border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400">
                   <Repeat className="size-3" />
